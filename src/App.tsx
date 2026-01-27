@@ -9,6 +9,9 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Movimientos from "./pages/Movimientos";
 import Configuracion from "./pages/Configuracion";
+import ConfigCuentas from "./pages/configuracion/Cuentas";
+import ConfigCategorias from "./pages/configuracion/Categorias";
+import ConfigRecurrentes from "./pages/configuracion/Recurrentes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +30,9 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/movimientos" element={<Movimientos />} />
             <Route path="/configuracion" element={<Configuracion />} />
+            <Route path="/configuracion/cuentas" element={<ConfigCuentas />} />
+            <Route path="/configuracion/categorias" element={<ConfigCategorias />} />
+            <Route path="/configuracion/recurrentes" element={<ConfigRecurrentes />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
