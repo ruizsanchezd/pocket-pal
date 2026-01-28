@@ -1,126 +1,140 @@
 
-# FinanceFlow - Phase 2: Configuration Pages
+# FinanceFlow - CSV Export Feature
 
 ## Overview
-Implement the three configuration subpages that are linked from the main configuration menu. These pages will allow users to manage their accounts, categories, and recurring expenses.
+Add data export functionality to allow users to download their financial data in CSV format. This includes:
+1. Monthly movements export (from the Movimientos page)
+2. Full data backup as ZIP (from Configuration page)
 
 ---
 
-## 1. Accounts Management (`/configuracion/cuentas`)
+## 1. Monthly CSV Export (Movimientos Page)
 
-### Features
-- List all accounts grouped by type (Corriente, Inversion, Monedero)
-- Create new account with modal form
-- Edit existing account
-- Deactivate account (soft delete)
-- Reorder accounts via drag or buttons
-- Set default account
-- For monedero type: configure monthly reload amount
+### Location
+Add an export button next to the "Nuevo Movimiento" button in the header section.
 
-### UI Components
-- Account list with color indicators
-- Modal form for create/edit
-- Toggle for active/inactive
-- Star icon to mark default account
+### Functionality
+- Export current month's movements to CSV
+- Filename format: `movimientos_YYYY-MM.csv`
+- Columns: Fecha, Concepto, Cantidad, Cuenta, Categoria, Subcategoria, Notas, Recurrente
+- Auto-download on click
 
----
-
-## 2. Categories Management (`/configuracion/categorias`)
-
-### Features
-- Tree view of categories (parent → subcategories)
-- Create new category/subcategory
-- Edit category (name, color, icon)
-- Delete category (with validation for no associated movements)
-- Filter by type: Ingreso / Gasto / Inversion
-
-### UI Components
-- Collapsible tree structure
-- Modal form for create/edit
-- Color picker for category color
-- Type selector (tabs or filter)
+### UI
+```text
+[← Enero 2026 →]              [Download icon] [+ Nuevo Movimiento]
+```
 
 ---
 
-## 3. Recurring Expenses Management (`/configuracion/recurrentes`)
+## 2. Full Backup Export (Configuration Page)
 
-### Features
-- List all recurring expense templates
-- Create new template with modal form
-- Edit existing template
-- Toggle active/inactive
-- Delete template
+### Location
+Add a new card in the Configuration page grid for "Exportar Datos".
 
-### Form Fields
-- Concepto (text)
-- Cantidad (number, negative for expense)
-- Dia del mes (1-31)
-- Cuenta (select)
-- Categoria (select)
-- Subcategoria (optional select)
-- Notas (textarea)
+### Functionality
+- Generate ZIP file containing multiple CSVs:
+  - `movimientos.csv` - All movements
+  - `cuentas.csv` - All accounts  
+  - `categorias.csv` - All categories
+  - `gastos_recurrentes.csv` - All recurring expense templates
+- Uses JSZip library for ZIP generation
+- Filename: `financeflow_backup_YYYY-MM-DD.zip`
 
 ---
 
 ## Technical Implementation
 
-### New Files to Create
+### New Utility File
+Create `src/lib/export.ts` with helper functions:
 
-```text
-src/pages/configuracion/
-├── Cuentas.tsx
-├── Categorias.tsx
-└── Recurrentes.tsx
-
-src/components/configuracion/
-├── CuentaForm.tsx
-├── CategoriaForm.tsx
-└── GastoRecurrenteForm.tsx
-```
-
-### Routes to Add (App.tsx)
 ```typescript
-<Route path="/configuracion/cuentas" element={<ConfigCuentas />} />
-<Route path="/configuracion/categorias" element={<ConfigCategorias />} />
-<Route path="/configuracion/recurrentes" element={<ConfigRecurrentes />} />
+// CSV generation
+function generateCSV(headers: string[], rows: string[][]): string
+
+// Download trigger
+function downloadFile(content: string | Blob, filename: string): void
+
+// Movement formatting for CSV
+function formatMovimientoForCSV(m: MovimientoConRelaciones): string[]
 ```
 
-### Shared Patterns
-All three pages will follow the same pattern as Movimientos:
-- ProtectedRoute wrapper
-- MainLayout for navigation
-- Card with header and list content
-- Dialog for create/edit forms
-- Confirmation dialog for delete
-- Toast notifications for feedback
-- Loading states with Loader2 spinner
+### Dependencies
+- **JSZip**: Required for ZIP file generation (will need to be installed)
+
+### Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/lib/export.ts` | Create | CSV/ZIP generation utilities |
+| `src/pages/Movimientos.tsx` | Modify | Add export month button |
+| `src/pages/Configuracion.tsx` | Modify | Add export backup card |
+| `src/pages/configuracion/ExportData.tsx` | Create | Full backup page with progress |
 
 ---
 
-## Validation Rules
+## CSV Format Specifications
 
-### Accounts
-- Name: required, max 100 chars
-- Type: required (corriente/inversion/monedero)
-- Initial balance: number, default 0
-- Cannot delete if has movements (show count)
+### movimientos.csv
+```csv
+Fecha,Concepto,Cantidad,Cuenta,Categoria,Subcategoria,Notas,Recurrente
+2026-01-15,Supermercado,-45.30,Caixa,Alimentacion,,Compra semanal,No
+2026-01-01,Nomina,2500.00,Caixa,Nomina,,,No
+```
 
-### Categories
-- Name: required, max 50 chars
-- Type: required (ingreso/gasto/inversion)
-- Cannot delete if has movements (show count)
-- Subcategories inherit type from parent
+### cuentas.csv
+```csv
+Nombre,Tipo,Divisa,Saldo Inicial,Color,Activa
+Caixa,corriente,EUR,3393.55,#3B82F6,Si
+```
 
-### Recurring Expenses
-- Concepto: required, max 200 chars
-- Cantidad: required, not 0
-- Cuenta: required
-- Categoria: required
+### categorias.csv
+```csv
+Nombre,Tipo,Categoria Padre,Color
+Alimentacion,gasto,,#6B7280
+Supermercado,gasto,Alimentacion,#6B7280
+```
+
+### gastos_recurrentes.csv
+```csv
+Concepto,Cantidad,Dia del Mes,Cuenta,Categoria,Notas,Activo
+Alquiler,-800,1,Caixa,Vivienda,,Si
+```
+
+---
+
+## User Flow
+
+### Monthly Export
+1. User navigates to Movimientos page
+2. Clicks download icon button
+3. CSV file downloads automatically
+4. Toast notification confirms: "Exportado movimientos de [mes]"
+
+### Full Backup
+1. User navigates to Configuracion
+2. Clicks "Exportar Datos" card
+3. New page shows export options
+4. User clicks "Descargar Backup Completo"
+5. Loading spinner while fetching all data
+6. ZIP file downloads
+7. Toast confirms: "Backup descargado correctamente"
+
+---
+
+## Implementation Steps
+
+1. **Install JSZip dependency** via package.json
+2. **Create export utilities** in `src/lib/export.ts`
+3. **Add monthly export button** to Movimientos.tsx header
+4. **Add export card** to Configuracion.tsx grid
+5. **Create ExportData page** with full backup functionality
+6. **Add route** in App.tsx for `/configuracion/exportar`
 
 ---
 
 ## Estimated Changes
-- 3 new page components
-- 3 new form components
-- 1 route update (App.tsx)
-- Reuse existing validations from `src/lib/validations.ts`
+- 1 new dependency (jszip)
+- 1 new utility file
+- 1 new page component
+- 2 modified pages (Movimientos, Configuracion)
+- 1 route addition (App.tsx)
