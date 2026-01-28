@@ -23,7 +23,8 @@ import {
   Loader2,
   ArrowLeft,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { cn } from '@/lib/utils';
@@ -31,6 +32,7 @@ import { Link } from 'react-router-dom';
 
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
+  saldo_actual?: number;
 }
 
 export default function ConfigCuentas() {
@@ -41,6 +43,22 @@ export default function ConfigCuentas() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCuenta, setEditingCuenta] = useState<CuentaConConfig | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<CuentaConConfig | null>(null);
+
+  // Calculate balance for an account
+  const calculateBalance = async (cuenta: Cuenta): Promise<number> => {
+    const { data: movimientos } = await supabase
+      .from('movimientos')
+      .select('cantidad')
+      .eq('cuenta_id', cuenta.id);
+
+    const sumaMovimientos = movimientos?.reduce(
+      (sum, m) => sum + Number(m.cantidad), 
+      0
+    ) || 0;
+
+    return Number(cuenta.saldo_inicial) + sumaMovimientos;
+  };
 
   // Fetch accounts
   useEffect(() => {
@@ -62,10 +80,17 @@ export default function ConfigCuentas() {
           .select('*')
           .eq('user_id', user.id);
         
-        const cuentasConConfig = cuentasData.map(cuenta => ({
-          ...cuenta,
-          monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null
-        })) as CuentaConConfig[];
+        // Calculate balances for all accounts
+        const cuentasConConfig = await Promise.all(
+          cuentasData.map(async (cuenta) => {
+            const saldo_actual = await calculateBalance(cuenta);
+            return {
+              ...cuenta,
+              monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null,
+              saldo_actual
+            } as CuentaConConfig;
+          })
+        );
         
         setCuentas(cuentasConConfig);
       }
@@ -174,10 +199,17 @@ export default function ConfigCuentas() {
           .select('*')
           .eq('user_id', user.id);
         
-        const cuentasConConfig = cuentasData.map(cuenta => ({
-          ...cuenta,
-          monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null
-        })) as CuentaConConfig[];
+        // Calculate balances for all accounts
+        const cuentasConConfig = await Promise.all(
+          cuentasData.map(async (cuenta) => {
+            const saldo_actual = await calculateBalance(cuenta);
+            return {
+              ...cuenta,
+              monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null,
+              saldo_actual
+            } as CuentaConConfig;
+          })
+        );
         
         setCuentas(cuentasConConfig);
       }
@@ -255,6 +287,47 @@ export default function ConfigCuentas() {
     setCuentas(newCuentas);
   };
 
+  const handleDelete = async (cuenta: CuentaConConfig) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('cuentas')
+      .delete()
+      .eq('id', cuenta.id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo eliminar la cuenta'
+      });
+      return;
+    }
+
+    // Remove from default account if it was the default
+    if (profile?.cuenta_default_id === cuenta.id) {
+      await supabase
+        .from('profiles')
+        .update({ cuenta_default_id: null })
+        .eq('id', user.id);
+      await refreshProfile();
+    }
+
+    setCuentas(cuentas.filter(c => c.id !== cuenta.id));
+    setDeleteConfirm(null);
+    toast({ title: 'Cuenta eliminada' });
+  };
+
+  const formatCurrency = (amount: number, currency: string): string => {
+    const formatter = new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: currency || 'EUR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return formatter.format(amount);
+  };
+
   // Group accounts by type
   const groupedCuentas = {
     corriente: cuentas.filter(c => c.tipo === 'corriente'),
@@ -288,11 +361,21 @@ export default function ConfigCuentas() {
                     <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                   )}
                 </div>
-                {cuenta.tipo === 'monedero' && cuenta.monedero_config && (
-                  <span className="text-xs text-muted-foreground">
-                    Recarga: {cuenta.monedero_config.recarga_mensual}€/mes
-                  </span>
-                )}
+                <div className="flex items-center gap-2 text-sm">
+                  {cuenta.saldo_actual !== undefined && (
+                    <span className={cn(
+                      "font-medium",
+                      cuenta.saldo_actual >= 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {formatCurrency(cuenta.saldo_actual, cuenta.divisa)}
+                    </span>
+                  )}
+                  {cuenta.tipo === 'monedero' && cuenta.monedero_config && (
+                    <span className="text-xs text-muted-foreground">
+                      Recarga: {cuenta.monedero_config.recarga_mensual}€/mes
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -340,6 +423,15 @@ export default function ConfigCuentas() {
                 onClick={() => handleEdit(cuenta)}
               >
                 <Pencil className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDeleteConfirm(cuenta)}
+                className="text-destructive hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -416,6 +508,29 @@ export default function ConfigCuentas() {
                 onSubmit={handleSave}
                 onCancel={() => setModalOpen(false)}
               />
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete confirmation */}
+          <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle>¿Eliminar cuenta?</DialogTitle>
+                <DialogDescription>
+                  Esta acción no se puede deshacer. Se eliminarán también todos los movimientos asociados a esta cuenta.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                >
+                  Eliminar
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
