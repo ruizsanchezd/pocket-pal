@@ -179,7 +179,9 @@ export default function ConfigRecurrentes() {
       setModalOpen(false);
       setEditingGasto(null);
     } catch (error) {
-      console.error('Error saving gasto recurrente:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving gasto recurrente:', error);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',

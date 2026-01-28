@@ -185,7 +185,9 @@ export default function ConfigCuentas() {
       setModalOpen(false);
       setEditingCuenta(null);
     } catch (error) {
-      console.error('Error saving cuenta:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving cuenta:', error);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',

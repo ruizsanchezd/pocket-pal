@@ -247,7 +247,9 @@ export default function Onboarding() {
       
       navigate('/movimientos');
     } catch (error) {
-      console.error('Onboarding error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Onboarding error:', error);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',

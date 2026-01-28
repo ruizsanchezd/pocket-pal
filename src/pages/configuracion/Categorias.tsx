@@ -158,7 +158,9 @@ export default function ConfigCategorias() {
       setEditingCategoria(null);
       setParentCategoria(null);
     } catch (error) {
-      console.error('Error saving categoria:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error saving categoria:', error);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',
