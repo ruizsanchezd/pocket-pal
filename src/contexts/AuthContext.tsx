@@ -8,20 +8,27 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  isNewUser: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  clearNewUserFlag: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const NEW_USER_KEY = 'pocketpal_new_user';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState<boolean>(() => {
+    return sessionStorage.getItem(NEW_USER_KEY) === 'true';
+  });
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -45,7 +52,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
+        // Track new user signup
+        if (event === 'SIGNED_UP') {
+          setIsNewUser(true);
+          sessionStorage.setItem(NEW_USER_KEY, 'true');
+        }
+
+        // For OAuth, check if user was created very recently (within last 10 seconds)
+        // This handles Google sign-in for brand new users
+        if (event === 'SIGNED_IN' && session?.user) {
+          const createdAt = new Date(session.user.created_at).getTime();
+          const now = Date.now();
+          const isVeryNew = (now - createdAt) < 10000; // 10 seconds
+
+          if (isVeryNew) {
+            setIsNewUser(true);
+            sessionStorage.setItem(NEW_USER_KEY, 'true');
+          }
+        }
+
         // Defer profile fetch with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
@@ -123,6 +149,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const clearNewUserFlag = () => {
+    setIsNewUser(false);
+    sessionStorage.removeItem(NEW_USER_KEY);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -130,11 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         profile,
         loading,
+        isNewUser,
         signUp,
         signIn,
         signInWithGoogle,
         signOut,
-        refreshProfile
+        refreshProfile,
+        clearNewUserFlag
       }}
     >
       {children}

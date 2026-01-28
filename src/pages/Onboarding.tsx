@@ -38,7 +38,7 @@ const DEFAULT_GASTOS_RECURRENTES: GastoRecurrenteInput[] = [
 ];
 
 export default function Onboarding() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, clearNewUserFlag } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -239,12 +239,13 @@ export default function Onboarding() {
         .eq('id', user.id);
 
       await refreshProfile();
-      
+      clearNewUserFlag();
+
       toast({
         title: '¡Configuración completada!',
         description: 'Bienvenido a PocketPal'
       });
-      
+
       navigate('/movimientos');
     } catch (error) {
       if (import.meta.env.DEV) {

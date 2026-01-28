@@ -4,25 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireOnboarding?: boolean;
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requireOnboarding = true 
-}: ProtectedRouteProps) {
-  const { user, loading, profile } = useAuth();
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        navigate('/auth');
-      } else if (requireOnboarding && !profile?.onboarding_completed) {
-        navigate('/onboarding');
-      }
+    if (!loading && !user) {
+      navigate('/auth');
     }
-  }, [user, loading, profile, navigate, requireOnboarding]);
+  }, [user, loading, navigate]);
 
   if (loading) {
     return (
@@ -33,10 +25,6 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return null;
-  }
-
-  if (requireOnboarding && !profile?.onboarding_completed) {
     return null;
   }
 

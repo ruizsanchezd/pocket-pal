@@ -8,19 +8,20 @@ import { TrendingUp } from 'lucide-react';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const { user, loading, profile } = useAuth();
+  const { user, loading, profile, isNewUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect based on onboarding status
-      if (profile?.onboarding_completed) {
-        navigate('/movimientos');
-      } else {
+      // Only redirect to onboarding for NEW users who haven't completed it
+      if (isNewUser && !profile?.onboarding_completed) {
         navigate('/onboarding');
+      } else {
+        // All other cases: existing users go to main app
+        navigate('/movimientos');
       }
     }
-  }, [user, loading, profile, navigate]);
+  }, [user, loading, profile, isNewUser, navigate]);
 
   if (loading) {
     return (
