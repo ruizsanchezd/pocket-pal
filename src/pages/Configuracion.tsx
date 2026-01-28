@@ -1,7 +1,7 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Wallet, Tags, CreditCard } from 'lucide-react';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Wallet, Tags, CreditCard, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Configuracion() {
@@ -49,6 +49,20 @@ export default function Configuracion() {
                   </CardTitle>
                   <CardDescription>
                     Configura tus gastos que se repiten cada mes
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+
+            <Link to="/configuracion/exportar">
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Download className="h-5 w-5" />
+                    Exportar Datos
+                  </CardTitle>
+                  <CardDescription>
+                    Descarga tus datos en formato CSV o backup completo
                   </CardDescription>
                 </CardHeader>
               </Card>

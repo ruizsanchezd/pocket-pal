@@ -12,6 +12,7 @@ import Configuracion from "./pages/Configuracion";
 import ConfigCuentas from "./pages/configuracion/Cuentas";
 import ConfigCategorias from "./pages/configuracion/Categorias";
 import ConfigRecurrentes from "./pages/configuracion/Recurrentes";
+import ConfigExportData from "./pages/configuracion/ExportData";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/configuracion/cuentas" element={<ConfigCuentas />} />
             <Route path="/configuracion/categorias" element={<ConfigCategorias />} />
             <Route path="/configuracion/recurrentes" element={<ConfigRecurrentes />} />
+            <Route path="/configuracion/exportar" element={<ConfigExportData />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
