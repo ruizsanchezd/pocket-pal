@@ -1,5 +1,5 @@
 -- =============================================
--- FINANCEFLOW DATABASE SCHEMA
+-- POCKETPAL DATABASE SCHEMA
 -- =============================================
 
 -- 1. Create enum for user roles

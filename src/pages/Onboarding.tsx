@@ -38,7 +38,7 @@ const DEFAULT_GASTOS_RECURRENTES: GastoRecurrenteInput[] = [
 ];
 
 export default function Onboarding() {
-  const { user, refreshProfile } = useAuth();
+  const { user, refreshProfile, clearNewUserFlag } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -239,12 +239,13 @@ export default function Onboarding() {
         .eq('id', user.id);
 
       await refreshProfile();
-      
+      clearNewUserFlag();
+
       toast({
         title: '¡Configuración completada!',
-        description: 'Bienvenido a FinanceFlow'
+        description: 'Bienvenido a PocketPal'
       });
-      
+
       navigate('/movimientos');
     } catch (error) {
       if (import.meta.env.DEV) {
@@ -270,7 +271,7 @@ export default function Onboarding() {
         {/* Header */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <TrendingUp className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">FinanceFlow</span>
+          <span className="text-2xl font-bold">PocketPal</span>
         </div>
 
         {/* Progress indicator */}

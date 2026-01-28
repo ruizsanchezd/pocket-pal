@@ -28,7 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/movimientos" replace />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/onboarding" element={<ProtectedRoute requireOnboarding={false}><Onboarding /></ProtectedRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/movimientos" element={<ProtectedRoute><Movimientos /></ProtectedRoute>} />
             <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />

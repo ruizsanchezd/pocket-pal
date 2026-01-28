@@ -8,19 +8,20 @@ import { TrendingUp } from 'lucide-react';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const { user, loading, profile } = useAuth();
+  const { user, loading, profile, isNewUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect based on onboarding status
-      if (profile?.onboarding_completed) {
-        navigate('/movimientos');
-      } else {
+      // Only redirect to onboarding for NEW users who haven't completed it
+      if (isNewUser && !profile?.onboarding_completed) {
         navigate('/onboarding');
+      } else {
+        // All other cases: existing users go to main app
+        navigate('/movimientos');
       }
     }
-  }, [user, loading, profile, navigate]);
+  }, [user, loading, profile, isNewUser, navigate]);
 
   if (loading) {
     return (
@@ -37,7 +38,7 @@ export default function Auth() {
         <div className="max-w-md text-primary-foreground">
           <div className="flex items-center gap-3 mb-8">
             <TrendingUp className="h-10 w-10" />
-            <span className="text-3xl font-bold">FinanceFlow</span>
+            <span className="text-3xl font-bold">PocketPal</span>
           </div>
           <h2 className="text-4xl font-bold mb-4">
             Controla tus finanzas de forma simple
@@ -70,7 +71,7 @@ export default function Auth() {
             {/* Mobile logo */}
             <div className="flex items-center justify-center gap-2 mb-8 lg:hidden">
               <TrendingUp className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold">FinanceFlow</span>
+              <span className="text-2xl font-bold">PocketPal</span>
             </div>
             
             {isLogin ? (

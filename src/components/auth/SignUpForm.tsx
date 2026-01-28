@@ -55,7 +55,7 @@ export function SignUpForm({ onSwitchToLogin }: SignUpFormProps) {
     } else {
       toast({
         title: '¡Cuenta creada!',
-        description: 'Bienvenido a FinanceFlow'
+        description: 'Bienvenido a PocketPal'
       });
     }
   };

@@ -1,5 +1,5 @@
 
-# FinanceFlow - CSV Export Feature
+# PocketPal - CSV Export Feature
 
 ## Overview
 Add data export functionality to allow users to download their financial data in CSV format. This includes:
@@ -38,7 +38,7 @@ Add a new card in the Configuration page grid for "Exportar Datos".
   - `categorias.csv` - All categories
   - `gastos_recurrentes.csv` - All recurring expense templates
 - Uses JSZip library for ZIP generation
-- Filename: `financeflow_backup_YYYY-MM-DD.zip`
+- Filename: `pocketpal_backup_YYYY-MM-DD.zip`
 
 ---
 

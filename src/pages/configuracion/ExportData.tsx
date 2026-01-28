@@ -86,7 +86,7 @@ export default function ExportData() {
 
       // Generate and download
       const blob = await zip.generateAsync({ type: 'blob' });
-      const filename = `financeflow_backup_${format(new Date(), 'yyyy-MM-dd')}.zip`;
+      const filename = `pocketpal_backup_${format(new Date(), 'yyyy-MM-dd')}.zip`;
       downloadFile(blob, filename);
 
       toast({
