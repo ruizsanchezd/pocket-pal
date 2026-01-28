@@ -94,7 +94,9 @@ export default function ExportData() {
         description: `Se han exportado ${movimientos.length} movimientos, ${cuentas.length} cuentas, ${categorias.length} categorías y ${recurrentes.length} gastos recurrentes.`
       });
     } catch (error) {
-      console.error('Export error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Export error:', error);
+      }
       toast({
         variant: 'destructive',
         title: 'Error',
