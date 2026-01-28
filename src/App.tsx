@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -27,14 +28,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/movimientos" replace />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/movimientos" element={<Movimientos />} />
-            <Route path="/configuracion" element={<Configuracion />} />
-            <Route path="/configuracion/cuentas" element={<ConfigCuentas />} />
-            <Route path="/configuracion/categorias" element={<ConfigCategorias />} />
-            <Route path="/configuracion/recurrentes" element={<ConfigRecurrentes />} />
-            <Route path="/configuracion/exportar" element={<ConfigExportData />} />
+            <Route path="/onboarding" element={<ProtectedRoute requireOnboarding={false}><Onboarding /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/movimientos" element={<ProtectedRoute><Movimientos /></ProtectedRoute>} />
+            <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
+            <Route path="/configuracion/cuentas" element={<ProtectedRoute><ConfigCuentas /></ProtectedRoute>} />
+            <Route path="/configuracion/categorias" element={<ProtectedRoute><ConfigCategorias /></ProtectedRoute>} />
+            <Route path="/configuracion/recurrentes" element={<ProtectedRoute><ConfigRecurrentes /></ProtectedRoute>} />
+            <Route path="/configuracion/exportar" element={<ProtectedRoute><ConfigExportData /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
