@@ -33,10 +33,12 @@ import {
   Trash2,
   Receipt,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
+import { downloadFile, generateMovimientosCSV } from '@/lib/export';
 
 export default function Movimientos() {
   const { user, profile } = useAuth();
@@ -360,10 +362,28 @@ export default function Movimientos() {
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
-            <Button onClick={handleCreateMovimiento}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nuevo Movimiento
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  const csv = generateMovimientosCSV(movimientos);
+                  downloadFile(csv, `movimientos_${currentMonth}.csv`);
+                  toast({
+                    title: 'CSV exportado',
+                    description: `Exportados ${movimientos.length} movimientos de ${formattedMonth}`
+                  });
+                }}
+                disabled={movimientos.length === 0}
+                title="Exportar mes a CSV"
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button onClick={handleCreateMovimiento}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nuevo Movimiento
+              </Button>
+            </div>
           </div>
 
           {/* Recurrent expenses banner */}
