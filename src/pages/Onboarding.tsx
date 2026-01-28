@@ -242,7 +242,7 @@ export default function Onboarding() {
       
       toast({
         title: '¡Configuración completada!',
-        description: 'Bienvenido a FinanceFlow'
+        description: 'Bienvenido a PocketPal'
       });
       
       navigate('/movimientos');
@@ -270,7 +270,7 @@ export default function Onboarding() {
         {/* Header */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <TrendingUp className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">FinanceFlow</span>
+          <span className="text-2xl font-bold">PocketPal</span>
         </div>
 
         {/* Progress indicator */}

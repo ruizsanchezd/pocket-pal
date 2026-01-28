@@ -49,7 +49,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           <Link to="/dashboard" className="flex items-center gap-2 mr-8">
             <TrendingUp className="h-6 w-6 text-primary" />
             <span className="font-bold text-lg hidden sm:inline-block">
-              FinanceFlow
+              PocketPal
             </span>
           </Link>
 

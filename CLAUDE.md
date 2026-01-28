@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-**FinanceFlow** - A personal finance management app built with React 18 + TypeScript + Vite + Tailwind CSS + shadcn-ui + Supabase.
+**PocketPal** - A personal finance management app built with React 18 + TypeScript + Vite + Tailwind CSS + shadcn-ui + Supabase.
 
 Features: Transaction tracking, account management, expense categorization, dashboards/analytics, recurring expenses, CSV export.
 

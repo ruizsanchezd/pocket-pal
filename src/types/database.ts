@@ -1,4 +1,4 @@
-// FinanceFlow Database Types
+// PocketPal Database Types
 
 export type CuentaTipo = 'corriente' | 'inversion' | 'monedero';
 export type CategoriaTipo = 'ingreso' | 'gasto' | 'inversion';
