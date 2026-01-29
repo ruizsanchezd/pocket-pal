@@ -7,6 +7,7 @@ export type AppRole = 'admin' | 'user';
 export interface Profile {
   id: string;
   display_name: string | null;
+  avatar_url: string | null;
   divisa_principal: string;
   cuenta_default_id: string | null;
   preferences: Record<string, unknown>;
