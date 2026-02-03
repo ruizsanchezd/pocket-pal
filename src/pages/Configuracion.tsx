@@ -1,5 +1,6 @@
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
+import { ProfileSection } from '@/components/configuracion/ProfileSection';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wallet, Tags, CreditCard, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,6 +11,9 @@ export default function Configuracion() {
       <MainLayout>
         <div className="space-y-6">
           <h1 className="text-2xl font-bold">Configuración</h1>
+
+          {/* Profile Section */}
+          <ProfileSection />
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Link to="/configuracion/cuentas">
