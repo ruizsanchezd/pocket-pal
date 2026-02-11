@@ -35,9 +35,7 @@ import {
   Loader2,
   AlertCircle,
   Download,
-  LayoutDashboard
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { downloadFile, generateMovimientosCSV } from '@/lib/export';
@@ -365,15 +363,6 @@ export default function Movimientos() {
               </Button>
             </div>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                asChild
-              >
-                <Link to="/dashboard">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </Link>
-              </Button>
               <Button
                 variant="outline"
                 size="icon"

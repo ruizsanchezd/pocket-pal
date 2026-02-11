@@ -46,8 +46,8 @@ export default function Explorar() {
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [trimestre, setTrimestre] = useState(Math.floor(new Date().getMonth() / 3) + 1);
-  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('');
-  const [subcategoriaFiltro, setSubcategoriaFiltro] = useState<string>('');
+  const [categoriaFiltro, setCategoriaFiltro] = useState<string>('__all__');
+  const [subcategoriaFiltro, setSubcategoriaFiltro] = useState<string>('__all__');
 
   // Data state
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([]);
@@ -72,7 +72,7 @@ export default function Explorar() {
 
   // Get subcategories for filtered category
   const subcategorias = useMemo(() => {
-    if (!categoriaFiltro) return [];
+    if (categoriaFiltro === '__all__') return [];
     return categorias.filter(c => c.parent_id === categoriaFiltro);
   }, [categorias, categoriaFiltro]);
 
@@ -107,62 +107,65 @@ export default function Explorar() {
 
     const fetchData = async () => {
       setLoading(true);
+      try {
+        // Fetch accounts
+        const { data: cuentasData } = await supabase
+          .from('cuentas')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('activa', true)
+          .order('orden');
 
-      // Fetch accounts
-      const { data: cuentasData } = await supabase
-        .from('cuentas')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('activa', true)
-        .order('orden');
+        if (cuentasData) setCuentas(cuentasData as Cuenta[]);
 
-      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
+        // Fetch categories
+        const { data: categoriasData } = await supabase
+          .from('categorias')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('orden');
 
-      // Fetch categories
-      const { data: categoriasData } = await supabase
-        .from('categorias')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('orden');
+        if (categoriasData) setCategorias(categoriasData as Categoria[]);
 
-      if (categoriasData) setCategorias(categoriasData as Categoria[]);
+        // Build query for movements
+        let query = supabase
+          .from('movimientos')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('fecha', dateRange.fechaDesde)
+          .lte('fecha', dateRange.fechaHasta)
+          .order('fecha', { ascending: false });
 
-      // Build query for movements
-      let query = supabase
-        .from('movimientos')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('fecha', dateRange.fechaDesde)
-        .lte('fecha', dateRange.fechaHasta)
-        .order('fecha', { ascending: false });
+        // Apply category filter
+        if (categoriaFiltro !== '__all__') {
+          query = query.eq('categoria_id', categoriaFiltro);
+        }
 
-      // Apply category filter
-      if (categoriaFiltro) {
-        query = query.eq('categoria_id', categoriaFiltro);
+        // Apply subcategory filter
+        if (subcategoriaFiltro !== '__all__') {
+          query = query.eq('subcategoria_id', subcategoriaFiltro);
+        }
+
+        const { data: movimientosData } = await query;
+
+        if (movimientosData) {
+          // Map accounts and categories to movements
+          const movimientosConRelaciones = movimientosData.map(m => ({
+            ...m,
+            cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
+            categoria: categoriasData?.find(c => c.id === m.categoria_id),
+            subcategoria: m.subcategoria_id
+              ? categoriasData?.find(c => c.id === m.subcategoria_id)
+              : null
+          })) as MovimientoConRelaciones[];
+
+          setMovimientos(movimientosConRelaciones);
+        }
+      } catch (err) {
+        if (import.meta.env.DEV) console.error('Error fetching data:', err);
+      } finally {
+        setLoading(false);
       }
-
-      // Apply subcategory filter
-      if (subcategoriaFiltro) {
-        query = query.eq('subcategoria_id', subcategoriaFiltro);
-      }
-
-      const { data: movimientosData } = await query;
-
-      if (movimientosData) {
-        // Map accounts and categories to movements
-        const movimientosConRelaciones = movimientosData.map(m => ({
-          ...m,
-          cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
-          categoria: categoriasData?.find(c => c.id === m.categoria_id),
-          subcategoria: m.subcategoria_id
-            ? categoriasData?.find(c => c.id === m.subcategoria_id)
-            : null
-        })) as MovimientoConRelaciones[];
-
-        setMovimientos(movimientosConRelaciones);
-      }
-
-      setLoading(false);
     };
 
     fetchData();
@@ -233,7 +236,7 @@ export default function Explorar() {
   const distributionData = useMemo(() => {
     if (movimientos.length === 0) return [];
 
-    if (!categoriaFiltro) {
+    if (categoriaFiltro === '__all__') {
       // Group by category
       const categoryTotals = new Map<string, { name: string; total: number }>();
 
@@ -402,14 +405,14 @@ export default function Explorar() {
                     value={categoriaFiltro}
                     onValueChange={(value) => {
                       setCategoriaFiltro(value);
-                      setSubcategoriaFiltro(''); // Reset subcategory
+                      setSubcategoriaFiltro('__all__');
                     }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todas" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todas</SelectItem>
+                      <SelectItem value="__all__">Todas</SelectItem>
                       {categoriasParent.map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
                       ))}
@@ -418,7 +421,7 @@ export default function Explorar() {
                 </div>
 
                 {/* Subcategory Filter */}
-                {categoriaFiltro && subcategorias.length > 0 && (
+                {categoriaFiltro !== '__all__' && subcategorias.length > 0 && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Subcategoría</label>
                     <Select value={subcategoriaFiltro} onValueChange={setSubcategoriaFiltro}>
@@ -426,7 +429,7 @@ export default function Explorar() {
                         <SelectValue placeholder="Todas" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Todas</SelectItem>
+                        <SelectItem value="__all__">Todas</SelectItem>
                         {subcategorias.map(sub => (
                           <SelectItem key={sub.id} value={sub.id}>{sub.nombre}</SelectItem>
                         ))}
@@ -509,7 +512,7 @@ export default function Explorar() {
                 <Card>
                   <CardHeader>
                     <CardTitle>
-                      Distribución {categoriaFiltro ? 'por subcategoría' : 'por categoría'}
+                      Distribución {categoriaFiltro !== '__all__' ? 'por subcategoría' : 'por categoría'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
