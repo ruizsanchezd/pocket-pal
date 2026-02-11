@@ -22,6 +22,9 @@ import {
 import { Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, GastoRecurrente } from '@/types/database';
 import { useState, useMemo } from 'react';
+import { CreatableSelect } from '@/components/ui/creatable-select';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GastoRecurrenteFormProps {
   cuentas: Cuenta[];
@@ -30,6 +33,7 @@ interface GastoRecurrenteFormProps {
   initialData?: GastoRecurrente;
   onSubmit: (data: GastoRecurrenteFormData) => Promise<void>;
   onCancel: () => void;
+  onCategoriaCreated?: (categoria: Categoria) => void;
 }
 
 export function GastoRecurrenteForm({
@@ -38,9 +42,11 @@ export function GastoRecurrenteForm({
   defaultCuentaId,
   initialData,
   onSubmit,
-  onCancel
+  onCancel,
+  onCategoriaCreated
 }: GastoRecurrenteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
 
   const form = useForm<GastoRecurrenteFormData>({
     resolver: zodResolver(gastoRecurrenteSchema),
@@ -177,53 +183,99 @@ export function GastoRecurrenteForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Categoría *</FormLabel>
-              <Select 
-                onValueChange={(value) => {
-                  field.onChange(value);
-                  form.setValue('subcategoria_id', undefined);
-                }} 
-                value={field.value}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una categoría" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {filteredCategorias.map((categoria) => (
-                    <SelectItem key={categoria.id} value={categoria.id}>
-                      {categoria.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <CreatableSelect
+                  options={filteredCategorias.map((cat) => ({
+                    value: cat.id,
+                    label: cat.nombre
+                  }))}
+                  value={field.value}
+                  onValueChange={(value) => {
+                    field.onChange(value);
+                    form.setValue('subcategoria_id', undefined);
+                  }}
+                  onCreate={async (nombre: string) => {
+                    if (!user) return null;
+
+                    // Recurring expenses are always 'gasto' type
+                    const { data, error } = await supabase
+                      .from('categorias')
+                      .insert({
+                        user_id: user.id,
+                        nombre,
+                        parent_id: null,
+                        tipo: 'gasto',
+                        color: '#6b7280', // Default gray
+                        orden: 999
+                      })
+                      .select()
+                      .single();
+
+                    if (error || !data) {
+                      console.error('Error creating category:', error);
+                      return null;
+                    }
+
+                    onCategoriaCreated?.(data);
+                    return data.id;
+                  }}
+                  placeholder="Selecciona una categoría"
+                  createLabel="+ Crear categoría"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        {subcategorias.length > 0 && (
+        {categoriaId && (
           <FormField
             control={form.control}
             name="subcategoria_id"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Subcategoría</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ''}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una subcategoría (opcional)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="">Ninguna</SelectItem>
-                    {subcategorias.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        {sub.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <CreatableSelect
+                    options={subcategorias.map((sub) => ({
+                      value: sub.id,
+                      label: sub.nombre
+                    }))}
+                    value={field.value || ''}
+                    onValueChange={field.onChange}
+                    onCreate={async (nombre: string) => {
+                      if (!user) return null;
+
+                      // Get tipo from parent category
+                      const parentCategoria = categorias.find((c) => c.id === categoriaId);
+                      if (!parentCategoria) return null;
+
+                      const { data, error } = await supabase
+                        .from('categorias')
+                        .insert({
+                          user_id: user.id,
+                          nombre,
+                          parent_id: categoriaId,
+                          tipo: parentCategoria.tipo,
+                          color: parentCategoria.color,
+                          orden: 999
+                        })
+                        .select()
+                        .single();
+
+                      if (error || !data) {
+                        console.error('Error creating subcategory:', error);
+                        return null;
+                      }
+
+                      onCategoriaCreated?.(data);
+                      return data.id;
+                    }}
+                    placeholder="Selecciona una subcategoría (opcional)"
+                    createLabel="+ Crear subcategoría"
+                    allowNone
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

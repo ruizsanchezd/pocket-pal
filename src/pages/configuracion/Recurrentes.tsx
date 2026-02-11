@@ -370,6 +370,7 @@ export default function ConfigRecurrentes() {
                 initialData={editingGasto || undefined}
                 onSubmit={handleSave}
                 onCancel={() => setModalOpen(false)}
+                onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
               />
             </DialogContent>
           </Dialog>

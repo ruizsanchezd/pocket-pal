@@ -576,6 +576,7 @@ export default function Movimientos() {
                 initialData={editingMovimiento || undefined}
                 onSubmit={handleSaveMovimiento}
                 onCancel={() => setModalOpen(false)}
+                onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
               />
             </DialogContent>
           </Dialog>
