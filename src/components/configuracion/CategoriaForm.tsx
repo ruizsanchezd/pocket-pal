@@ -11,6 +11,7 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
+import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Loader2 } from 'lucide-react';
 import { Categoria, CategoriaTipo } from '@/types/database';
 import { useState } from 'react';
@@ -111,11 +112,9 @@ export function CategoriaForm({
             <FormItem>
               <FormLabel>Icono (emoji opcional)</FormLabel>
               <FormControl>
-                <Input 
-                  placeholder="🍕" 
-                  maxLength={2}
-                  className="w-20"
-                  {...field} 
+                <EmojiPicker
+                  value={field.value || ''}
+                  onChange={field.onChange}
                 />
               </FormControl>
               <FormMessage />

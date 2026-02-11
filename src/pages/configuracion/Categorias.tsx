@@ -20,9 +20,8 @@ import {
 } from '@/components/ui/collapsible';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Pencil, 
+import {
+  Plus,
   Trash2,
   Tags,
   Loader2,
@@ -134,6 +133,17 @@ export default function ConfigCategorias() {
       } else {
         // Create category
         const tipo = parentCategoria?.tipo || activeTab;
+
+        // Guard: prevent sub-subcategories
+        if (parentCategoria?.parent_id) {
+          toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'No se permiten subcategorías anidadas'
+          });
+          return;
+        }
+
         const { data: newCategoria, error } = await supabase
           .from('categorias')
           .insert({
@@ -222,15 +232,16 @@ export default function ConfigCategorias() {
     const isExpanded = expandedIds.has(categoria.id);
 
     return (
-      <div key={categoria.id} className="space-y-1">
+      <div key={categoria.id} className="space-y-2">
         <div
-          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50"
+          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
           style={{ marginLeft: `${level * 24}px` }}
+          onClick={() => handleEdit(categoria)}
         >
           <div className="flex items-center gap-3">
             {hasChildren ? (
               <button
-                onClick={() => toggleExpanded(categoria.id)}
+                onClick={(e) => { e.stopPropagation(); toggleExpanded(categoria.id); }}
                 className="p-1 hover:bg-muted rounded"
               >
                 {isExpanded ? (
@@ -242,33 +253,31 @@ export default function ConfigCategorias() {
             ) : (
               <div className="w-6" />
             )}
-            <div 
+            <div
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: categoria.color }}
             />
-            <span className="font-medium">{categoria.nombre}</span>
+            <span className="font-medium">
+              {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
+              {categoria.nombre}
+            </span>
           </div>
 
           <div className="flex items-center gap-1">
+            {level === 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={(e) => { e.stopPropagation(); handleCreate(categoria); }}
+                title="Añadir subcategoría"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => handleCreate(categoria)}
-              title="Añadir subcategoría"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleEdit(categoria)}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDeleteConfirm(categoria)}
+              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(categoria); }}
               className="text-destructive"
             >
               <Trash2 className="h-4 w-4" />
@@ -277,7 +286,7 @@ export default function ConfigCategorias() {
         </div>
 
         {hasChildren && isExpanded && (
-          <div>
+          <div className="space-y-2">
             {categoria.children!.map(child => renderCategoria(child, level + 1))}
           </div>
         )}

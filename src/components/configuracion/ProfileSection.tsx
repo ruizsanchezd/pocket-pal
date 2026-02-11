@@ -37,12 +37,14 @@ export function ProfileSection() {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update({ display_name: displayName.trim() || null })
-      .eq('id', user.id);
+      .eq('id', user.id)
+      .select()
+      .single();
 
-    if (error) {
+    if (error || !data) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -107,13 +109,15 @@ export function ProfileSection() {
 
       // Update profile with avatar URL (add timestamp to bust cache)
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
-        .eq('id', user.id);
+        .eq('id', user.id)
+        .select()
+        .single();
 
-      if (updateError) {
-        throw updateError;
+      if (updateError || !updateData) {
+        throw updateError || new Error('No se pudo actualizar el perfil');
       }
 
       await refreshProfile();

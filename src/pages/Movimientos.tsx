@@ -343,7 +343,7 @@ export default function Movimientos() {
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -445,6 +445,7 @@ export default function Movimientos() {
                       <TableHead className="text-right">Cantidad</TableHead>
                       <TableHead className="hidden md:table-cell">Cuenta</TableHead>
                       <TableHead className="hidden md:table-cell">Categoría</TableHead>
+                      <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
                       <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -471,7 +472,7 @@ export default function Movimientos() {
                           {formatCurrency(Number(movimiento.cantidad))}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <span 
+                          <span
                             className="px-2 py-1 rounded text-xs"
                             style={{ backgroundColor: `${movimiento.cuenta?.color}20` }}
                           >
@@ -480,11 +481,9 @@ export default function Movimientos() {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {movimiento.categoria?.nombre}
-                          {movimiento.subcategoria && (
-                            <span className="text-muted-foreground">
-                              {' > '}{movimiento.subcategoria.nombre}
-                            </span>
-                          )}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-muted-foreground">
+                          {movimiento.subcategoria?.nombre}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

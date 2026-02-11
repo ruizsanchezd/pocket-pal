@@ -62,7 +62,7 @@ export function MovimientoForm({
       fecha: initialData ? new Date(initialData.fecha) : new Date(),
       concepto: initialData?.concepto || '',
       cantidad: initialData?.cantidad ? Number(initialData.cantidad) : undefined,
-      cuenta_id: initialData?.cuenta_id || defaultCuentaId || '',
+      cuenta_id: initialData?.cuenta_id || defaultCuentaId || cuentas[0]?.id || '',
       categoria_id: initialData?.categoria_id || '',
       subcategoria_id: initialData?.subcategoria_id || undefined,
       notas: initialData?.notas || ''
