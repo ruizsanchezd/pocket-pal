@@ -14,6 +14,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  setProfileData: (data: Profile) => void;
   clearNewUserFlag: () => void;
 }
 
@@ -155,6 +156,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setProfileData = (data: Profile) => {
+    setProfile(data);
+  };
+
   const clearNewUserFlag = () => {
     setIsNewUser(false);
     sessionStorage.removeItem(NEW_USER_KEY);
@@ -173,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signOut,
         refreshProfile,
+        setProfileData,
         clearNewUserFlag
       }}
     >

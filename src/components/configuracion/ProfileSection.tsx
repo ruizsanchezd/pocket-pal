@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Camera, Loader2 } from 'lucide-react';
 
 export function ProfileSection() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, setProfileData } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -42,7 +42,7 @@ export function ProfileSection() {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase.rpc('update_own_profile', {
+    const { data, error } = await supabase.rpc('update_own_profile', {
       _display_name: displayName.trim() || null,
       _set_display_name: true,
     });
@@ -53,10 +53,15 @@ export function ProfileSection() {
         title: 'Error al actualizar nombre',
         description: error.message
       });
+    } else if (data && typeof data === 'object' && 'id' in data) {
+      setProfileData(data as unknown as Profile);
+      toast({ title: 'Nombre actualizado' });
     } else {
-      await refreshProfile();
+      // Diagnostic: show what the RPC actually returned
       toast({
-        title: 'Nombre actualizado'
+        variant: 'destructive',
+        title: 'RPC no devolvió perfil',
+        description: `data=${JSON.stringify(data)}`
       });
     }
     setSaving(false);
@@ -118,7 +123,7 @@ export function ProfileSection() {
 
       // Update profile with avatar URL (add timestamp to bust cache)
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase.rpc('update_own_profile', {
+      const { data: rpcData, error: updateError } = await supabase.rpc('update_own_profile', {
         _avatar_url: avatarUrl,
         _set_avatar_url: true,
       });
@@ -133,10 +138,16 @@ export function ProfileSection() {
         return;
       }
 
-      await refreshProfile();
-      toast({
-        title: 'Foto actualizada'
-      });
+      if (rpcData && typeof rpcData === 'object' && 'id' in rpcData) {
+        setProfileData(rpcData as unknown as Profile);
+        toast({ title: 'Foto actualizada' });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'RPC no devolvió perfil',
+          description: `data=${JSON.stringify(rpcData)}`
+        });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';
       toast({
