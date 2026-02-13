@@ -17,8 +17,7 @@ import {
   LogOut,
   ChevronDown,
   Menu,
-  X,
-  Search
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +27,6 @@ interface MainLayoutProps {
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/explorar', label: 'Explorar', icon: Search },
   { href: '/movimientos', label: 'Movimientos', icon: Receipt },
   { href: '/configuracion', label: 'Configuración', icon: Settings }
 ];

@@ -18,6 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { DistribucionSection } from '@/components/dashboard/DistribucionSection';
 
 interface PatrimonioData {
   mes: string;
@@ -449,6 +450,9 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Distribution Section */}
+          <DistribucionSection />
         </div>
       </MainLayout>
     </ProtectedRoute>

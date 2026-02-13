@@ -16,6 +16,13 @@ import {
   TableRow
 } from '@/components/ui/table';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -53,6 +60,8 @@ export default function Movimientos() {
   const [editingMovimiento, setEditingMovimiento] = useState<MovimientoConRelaciones | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showRecurrenteBanner, setShowRecurrenteBanner] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
+  const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>('__all__');
 
   // Format month for display
   const formattedMonth = useMemo(() => {
@@ -60,12 +69,33 @@ export default function Movimientos() {
     return format(date, 'MMMM yyyy', { locale: es });
   }, [currentMonth]);
 
-  // Calculate totals
+  // Get parent categories and all subcategories
+  const categoriasParent = useMemo(() => {
+    return categorias.filter(c => !c.parent_id);
+  }, [categorias]);
+
+  const todasSubcategorias = useMemo(() => {
+    return categorias.filter(c => c.parent_id);
+  }, [categorias]);
+
+  // Filter movements
+  const filteredMovimientos = useMemo(() => {
+    let filtered = movimientos;
+    if (filtroCategoria !== '__all__') {
+      filtered = filtered.filter(m => m.categoria_id === filtroCategoria);
+    }
+    if (filtroSubcategoria !== '__all__') {
+      filtered = filtered.filter(m => m.subcategoria_id === filtroSubcategoria);
+    }
+    return filtered;
+  }, [movimientos, filtroCategoria, filtroSubcategoria]);
+
+  // Calculate totals from filtered movements
   const totals = useMemo(() => {
-    const ingresos = movimientos
+    const ingresos = filteredMovimientos
       .filter(m => m.cantidad > 0)
       .reduce((sum, m) => sum + Number(m.cantidad), 0);
-    const gastos = movimientos
+    const gastos = filteredMovimientos
       .filter(m => m.cantidad < 0)
       .reduce((sum, m) => sum + Math.abs(Number(m.cantidad)), 0);
     return {
@@ -73,7 +103,7 @@ export default function Movimientos() {
       gastos,
       balance: ingresos - gastos
     };
-  }, [movimientos]);
+  }, [filteredMovimientos]);
 
   // Fetch data
   useEffect(() => {
@@ -414,10 +444,49 @@ export default function Movimientos() {
           {/* Movements table */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Movimientos
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Movimientos
+                </CardTitle>
+                {movimientos.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue>
+                          {filtroCategoria === '__all__'
+                            ? 'Categoría'
+                            : categoriasParent.find(c => c.id === filtroCategoria)?.nombre
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todas</SelectItem>
+                        {categoriasParent.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filtroSubcategoria} onValueChange={setFiltroSubcategoria}>
+                      <SelectTrigger className="w-[150px]">
+                        <SelectValue>
+                          {filtroSubcategoria === '__all__'
+                            ? 'Subcategoría'
+                            : todasSubcategorias.find(s => s.id === filtroSubcategoria)?.nombre
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todas</SelectItem>
+                        {todasSubcategorias.map(sub => (
+                          <SelectItem key={sub.id} value={sub.id}>{sub.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -437,20 +506,21 @@ export default function Movimientos() {
                   </Button>
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Fecha</TableHead>
-                      <TableHead>Concepto</TableHead>
-                      <TableHead className="text-right">Cantidad</TableHead>
-                      <TableHead className="hidden md:table-cell">Cuenta</TableHead>
-                      <TableHead className="hidden md:table-cell">Categoría</TableHead>
-                      <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {movimientos.map((movimiento) => (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Fecha</TableHead>
+                        <TableHead>Concepto</TableHead>
+                        <TableHead className="text-right">Cantidad</TableHead>
+                        <TableHead className="hidden md:table-cell">Cuenta</TableHead>
+                        <TableHead className="hidden md:table-cell">Categoría</TableHead>
+                        <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
+                        <TableHead className="w-[80px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMovimientos.map((movimiento) => (
                       <TableRow key={movimiento.id} className="group">
                         <TableCell className="font-medium">
                           {format(new Date(movimiento.fecha), 'dd/MM')}
@@ -506,15 +576,16 @@ export default function Movimientos() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
           </Card>
 
           {/* Totals */}
-          {movimientos.length > 0 && (
+          {filteredMovimientos.length > 0 && (
             <Card>
               <CardContent className="py-4">
                 <div className="flex flex-wrap justify-center gap-6 text-center">

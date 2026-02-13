@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, getOAuthRedirectUrl } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
 
 interface AuthContextType {
@@ -125,13 +125,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    const redirectUrl = getOAuthRedirectUrl();
+
+    if (import.meta.env.DEV) {
+      console.log('OAuth redirect URL:', redirectUrl);
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth`
+        redirectTo: redirectUrl
       }
     });
-    
+
     return { error: error as Error | null };
   };
 

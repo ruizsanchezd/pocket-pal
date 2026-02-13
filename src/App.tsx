@@ -6,9 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
-import Explorar from "./pages/Explorar";
 import Movimientos from "./pages/Movimientos";
 import Configuracion from "./pages/Configuracion";
 import ConfigCuentas from "./pages/configuracion/Cuentas";
@@ -29,9 +29,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/movimientos" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/explorar" element={<ProtectedRoute><Explorar /></ProtectedRoute>} />
+            <Route path="/explorar" element={<Navigate to="/dashboard" replace />} />
             <Route path="/movimientos" element={<ProtectedRoute><Movimientos /></ProtectedRoute>} />
             <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
             <Route path="/configuracion/cuentas" element={<ProtectedRoute><ConfigCuentas /></ProtectedRoute>} />

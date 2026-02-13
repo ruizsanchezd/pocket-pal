@@ -56,14 +56,28 @@ export function LoginForm({ onSwitchToSignUp }: LoginFormProps) {
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
+
+    if (import.meta.env.DEV) {
+      console.log('Iniciando OAuth con Google...');
+    }
+
     const { error } = await signInWithGoogle();
+
+    if (import.meta.env.DEV) {
+      if (error) {
+        console.error('Error OAuth:', error);
+      } else {
+        console.log('OAuth iniciado, esperando redirección...');
+      }
+    }
+
     setIsGoogleLoading(false);
 
     if (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo iniciar sesión con Google'
+        description: error.message || 'No se pudo iniciar sesión con Google'
       });
     }
   };

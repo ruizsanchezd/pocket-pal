@@ -15,3 +15,14 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
+
+// Helper para obtener la URL de redirección correcta
+export const getOAuthRedirectUrl = () => {
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (isLocalhost) {
+    return 'http://localhost:8080/auth/callback';
+  }
+  // En producción, usar la URL actual del dominio
+  return `${window.location.origin}/auth/callback`;
+};
