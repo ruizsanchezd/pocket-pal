@@ -42,10 +42,10 @@ export function ProfileSection() {
     if (!user) return;
 
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ display_name: displayName.trim() || null })
-      .eq('id', user.id);
+    const { error } = await supabase.rpc('update_own_profile', {
+      _display_name: displayName.trim() || null,
+      _set_display_name: true,
+    });
 
     if (error) {
       toast({
@@ -118,10 +118,10 @@ export function ProfileSection() {
 
       // Update profile with avatar URL (add timestamp to bust cache)
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: avatarUrl })
-        .eq('id', user.id);
+      const { error: updateError } = await supabase.rpc('update_own_profile', {
+        _avatar_url: avatarUrl,
+        _set_avatar_url: true,
+      });
 
       if (updateError) {
         toast({
