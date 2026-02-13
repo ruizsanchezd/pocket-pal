@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,11 @@ export function ProfileSection() {
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Sync displayName when profile loads or changes externally
+  useEffect(() => {
+    setDisplayName(profile?.display_name || '');
+  }, [profile?.display_name]);
 
   const getInitials = () => {
     if (profile?.display_name) {
@@ -37,18 +42,16 @@ export function ProfileSection() {
     if (!user) return;
 
     setSaving(true);
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ display_name: displayName.trim() || null })
-      .eq('id', user.id)
-      .select()
-      .single();
+      .eq('id', user.id);
 
-    if (error || !data) {
+    if (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo actualizar el nombre'
+        title: 'Error al actualizar nombre',
+        description: error.message
       });
     } else {
       await refreshProfile();
@@ -99,7 +102,13 @@ export function ProfileSection() {
         .upload(fileName, file, { upsert: true });
 
       if (uploadError) {
-        throw uploadError;
+        toast({
+          variant: 'destructive',
+          title: 'Error al subir imagen',
+          description: uploadError.message
+        });
+        setUploadingPhoto(false);
+        return;
       }
 
       // Get public URL
@@ -109,15 +118,19 @@ export function ProfileSection() {
 
       // Update profile with avatar URL (add timestamp to bust cache)
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: avatarUrl })
-        .eq('id', user.id)
-        .select()
-        .single();
+        .eq('id', user.id);
 
-      if (updateError || !updateData) {
-        throw updateError || new Error('No se pudo actualizar el perfil');
+      if (updateError) {
+        toast({
+          variant: 'destructive',
+          title: 'Error al guardar avatar',
+          description: updateError.message
+        });
+        setUploadingPhoto(false);
+        return;
       }
 
       await refreshProfile();
@@ -125,13 +138,11 @@ export function ProfileSection() {
         title: 'Foto actualizada'
       });
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error uploading photo:', error);
-      }
+      const message = error instanceof Error ? error.message : 'Error desconocido';
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo subir la foto. Asegúrate de que el bucket "avatars" existe en Supabase Storage.'
+        title: 'Error al subir foto',
+        description: message
       });
     }
 
