@@ -53,15 +53,16 @@ export function ProfileSection() {
         title: 'Error al actualizar nombre',
         description: error.message
       });
-    } else if (data && typeof data === 'object' && 'id' in data) {
-      setProfileData(data as unknown as Profile);
+    } else if (data?.profile) {
+      setProfileData(data.profile as Profile);
       toast({ title: 'Nombre actualizado' });
     } else {
-      // Diagnostic: show what the RPC actually returned
+      // Show full diagnostic info
       toast({
         variant: 'destructive',
-        title: 'RPC no devolvió perfil',
-        description: `data=${JSON.stringify(data)}`
+        title: 'No se pudo actualizar',
+        description: `uid=${data?.auth_uid}, exists=${data?.profile_exists}, rows=${data?.rows_affected}`,
+        duration: 15000,
       });
     }
     setSaving(false);
@@ -138,14 +139,15 @@ export function ProfileSection() {
         return;
       }
 
-      if (rpcData && typeof rpcData === 'object' && 'id' in rpcData) {
-        setProfileData(rpcData as unknown as Profile);
+      if (rpcData?.profile) {
+        setProfileData(rpcData.profile as Profile);
         toast({ title: 'Foto actualizada' });
       } else {
         toast({
           variant: 'destructive',
-          title: 'RPC no devolvió perfil',
-          description: `data=${JSON.stringify(rpcData)}`
+          title: 'No se pudo guardar avatar',
+          description: `uid=${rpcData?.auth_uid}, exists=${rpcData?.profile_exists}, rows=${rpcData?.rows_affected}`,
+          duration: 15000,
         });
       }
     } catch (error) {
