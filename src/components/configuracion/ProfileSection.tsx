@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { User, Camera, Loader2 } from 'lucide-react';
+import { Profile } from '@/types/database';
 
 export function ProfileSection() {
   const { user, profile, setProfileData } = useAuth();
@@ -57,12 +58,10 @@ export function ProfileSection() {
       setProfileData(data.profile as Profile);
       toast({ title: 'Nombre actualizado' });
     } else {
-      // Show full diagnostic info
       toast({
         variant: 'destructive',
-        title: 'No se pudo actualizar',
-        description: `uid=${data?.auth_uid}, exists=${data?.profile_exists}, rows=${data?.rows_affected}`,
-        duration: 15000,
+        title: 'Error',
+        description: 'No se pudo actualizar el nombre'
       });
     }
     setSaving(false);
@@ -145,9 +144,8 @@ export function ProfileSection() {
       } else {
         toast({
           variant: 'destructive',
-          title: 'No se pudo guardar avatar',
-          description: `uid=${rpcData?.auth_uid}, exists=${rpcData?.profile_exists}, rows=${rpcData?.rows_affected}`,
-          duration: 15000,
+          title: 'Error',
+          description: 'No se pudo guardar la foto de perfil'
         });
       }
     } catch (error) {
