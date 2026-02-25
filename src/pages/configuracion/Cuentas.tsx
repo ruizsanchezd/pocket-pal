@@ -15,10 +15,10 @@ import {
 } from '@/components/ui/dialog';
 import { CuentaForm } from '@/components/configuracion/CuentaForm';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Pencil, 
-  Star, 
+import {
+  Plus,
+  Pencil,
+  Star,
   Wallet,
   Loader2,
   ArrowLeft,
@@ -29,6 +29,7 @@ import {
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
@@ -116,19 +117,81 @@ export default function ConfigCuentas() {
 
     try {
       if (editingCuenta) {
-        // Update account
-        const { error: updateError } = await supabase
-          .from('cuentas')
-          .update({
-            nombre: data.nombre,
-            tipo: data.tipo,
-            divisa: data.divisa,
-            saldo_inicial: data.saldo_inicial,
-            color: data.color
-          })
-          .eq('id', editingCuenta.id);
+        // Check if balance was overridden
+        if (data.saldo_actual !== undefined && data.saldo_actual !== editingCuenta.saldo_actual) {
+          // Balance override: recalculate saldo_inicial
+          const { data: movimientos } = await supabase
+            .from('movimientos')
+            .select('cantidad')
+            .eq('cuenta_id', editingCuenta.id);
 
-        if (updateError) throw updateError;
+          const sumaMovimientos = movimientos?.reduce(
+            (sum, m) => sum + Number(m.cantidad),
+            0
+          ) || 0;
+
+          // New saldo_inicial = desired balance - sum of movements
+          const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos;
+
+          // Update account with new saldo_inicial
+          const { error: updateError } = await supabase
+            .from('cuentas')
+            .update({
+              nombre: data.nombre,
+              tipo: data.tipo,
+              divisa: data.divisa,
+              saldo_inicial: nuevoSaldoInicial,
+              capital_inicial_invertido: data.capital_inicial_invertido || 0,
+              color: data.color
+            })
+            .eq('id', editingCuenta.id);
+
+          if (updateError) throw updateError;
+
+          // Upsert snapshot for current month
+          const currentMonth = format(new Date(), 'yyyy-MM');
+          const { data: snapshot } = await supabase
+            .from('snapshots_patrimonio')
+            .upsert(
+              {
+                user_id: user.id,
+                mes: currentMonth,
+                cuenta_id: editingCuenta.id,
+                saldo_registrado: data.saldo_actual,
+                saldo_calculado: data.saldo_actual,
+                tipo: 'manual'
+              },
+              { onConflict: 'user_id,mes,cuenta_id' }
+            )
+            .select()
+            .single();
+
+          // Log in balance history
+          await supabase
+            .from('account_balance_history')
+            .insert({
+              user_id: user.id,
+              cuenta_id: editingCuenta.id,
+              snapshot_id: snapshot?.id || null,
+              previous_balance: editingCuenta.saldo_actual || 0,
+              new_balance: data.saldo_actual
+            });
+        } else {
+          // Normal update (no balance change)
+          const { error: updateError } = await supabase
+            .from('cuentas')
+            .update({
+              nombre: data.nombre,
+              tipo: data.tipo,
+              divisa: data.divisa,
+              saldo_inicial: data.saldo_inicial,
+              capital_inicial_invertido: data.capital_inicial_invertido || 0,
+              color: data.color
+            })
+            .eq('id', editingCuenta.id);
+
+          if (updateError) throw updateError;
+        }
 
         // Handle monedero config
         if (data.tipo === 'monedero' && data.recarga_mensual) {
@@ -164,6 +227,7 @@ export default function ConfigCuentas() {
             tipo: data.tipo,
             divisa: data.divisa,
             saldo_inicial: data.saldo_inicial,
+            capital_inicial_invertido: data.capital_inicial_invertido || 0,
             color: data.color,
             orden: cuentas.length
           })
@@ -505,6 +569,7 @@ export default function ConfigCuentas() {
               </DialogHeader>
               <CuentaForm
                 initialData={editingCuenta || undefined}
+                saldoActual={editingCuenta?.saldo_actual}
                 onSubmit={handleSave}
                 onCancel={() => setModalOpen(false)}
               />

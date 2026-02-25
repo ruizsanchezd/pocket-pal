@@ -122,7 +122,9 @@ export default function ConfigRecurrentes() {
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
-            notas: data.notas || null
+            notas: data.notas || null,
+            is_transfer: data.is_transfer || false,
+            destination_account_id: data.destination_account_id || null
           })
           .eq('id', editingGasto.id);
 
@@ -156,7 +158,9 @@ export default function ConfigRecurrentes() {
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
-            notas: data.notas || null
+            notas: data.notas || null,
+            is_transfer: data.is_transfer || false,
+            destination_account_id: data.destination_account_id || null
           })
           .select()
           .single();

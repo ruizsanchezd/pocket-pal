@@ -23,6 +23,7 @@ export interface Cuenta {
   tipo: CuentaTipo;
   divisa: string;
   saldo_inicial: number;
+  capital_inicial_invertido: number;
   color: string;
   activa: boolean;
   orden: number;
@@ -67,6 +68,8 @@ export interface GastoRecurrente {
   subcategoria_id: string | null;
   notas: string | null;
   activo: boolean;
+  is_transfer: boolean;
+  destination_account_id: string | null;
   created_at: string;
 }
 
@@ -101,8 +104,20 @@ export interface SnapshotPatrimonio {
   saldo_registrado: number | null;
   saldo_calculado: number | null;
   tipo_cambio: number | null;
+  tipo: 'manual' | 'auto';
   notas: string | null;
   created_at: string;
+  updated_at: string;
+}
+
+export interface AccountBalanceHistory {
+  id: string;
+  user_id: string;
+  cuenta_id: string;
+  snapshot_id: string | null;
+  previous_balance: number;
+  new_balance: number;
+  changed_at: string;
 }
 
 // Form types
@@ -121,6 +136,7 @@ export interface CuentaFormData {
   tipo: CuentaTipo;
   divisa: string;
   saldo_inicial: number;
+  saldo_actual?: number; // For balance override when editing
   color: string;
   recarga_mensual?: number; // Only for monedero
 }
@@ -144,4 +160,6 @@ export interface DashboardMetrics {
 export interface CuentaConSaldo extends Cuenta {
   saldo_actual: number;
   gastos_mes?: number; // For monedero type
+  invertido?: number; // For inversion type - total deposited
+  rendimiento?: number; // For inversion type - returns (saldo_actual - invertido)
 }

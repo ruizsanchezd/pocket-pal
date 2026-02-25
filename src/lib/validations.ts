@@ -73,6 +73,8 @@ export const cuentaSchema = z.object({
       invalid_type_error: 'Introduce un número válido'
     })
     .default(0),
+  saldo_actual: z.number().optional(), // For balance override when editing
+  capital_inicial_invertido: z.number().optional(), // For investment accounts
   color: z.string().default('#3B82F6'),
   recarga_mensual: z
     .number()
@@ -117,7 +119,18 @@ export const gastoRecurrenteSchema = z.object({
   cuenta_id: z.string().min(1, 'Selecciona una cuenta'),
   categoria_id: z.string().min(1, 'Selecciona una categoría'),
   subcategoria_id: z.string().optional(),
-  notas: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional()
+  notas: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
+  is_transfer: z.boolean().default(false),
+  destination_account_id: z.string().nullable().optional()
+}).refine((data) => {
+  // If is_transfer, destination_account_id is required and must differ from cuenta_id
+  if (data.is_transfer) {
+    return !!data.destination_account_id && data.destination_account_id !== data.cuenta_id;
+  }
+  return true;
+}, {
+  message: 'Selecciona una cuenta destino diferente a la cuenta origen',
+  path: ['destination_account_id']
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;

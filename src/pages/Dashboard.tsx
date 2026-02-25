@@ -19,6 +19,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { DistribucionSection } from '@/components/dashboard/DistribucionSection';
+import { useAutoSnapshot } from '@/hooks/useAutoSnapshot';
 
 interface PatrimonioData {
   mes: string;
@@ -27,7 +28,10 @@ interface PatrimonioData {
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
-  
+
+  // Auto-generate snapshots for previous month if needed
+  useAutoSnapshot(user?.id);
+
   const [cuentas, setCuentas] = useState<CuentaConSaldo[]>([]);
   const [loading, setLoading] = useState(true);
   const [patrimonioData, setPatrimonioData] = useState<PatrimonioData[]>([]);
@@ -100,78 +104,102 @@ export default function Dashboard() {
               ) || 0;
             }
 
+            // For inversion type, calculate invested (deposits) and returns
+            let invertido = 0;
+            let rendimiento = 0;
+            if (cuenta.tipo === 'inversion') {
+              // Capital inicial + sum of all positive movements (deposits)
+              const capitalInicial = Number(cuenta.capital_inicial_invertido) || 0;
+              const depositos = movimientos
+                ?.filter(m => Number(m.cantidad) > 0)
+                .reduce((sum, m) => sum + Number(m.cantidad), 0) || 0;
+
+              invertido = capitalInicial + depositos;
+              const saldoActual = Number(cuenta.saldo_inicial) + sumaMovimientos;
+              rendimiento = saldoActual - invertido;
+            }
+
             return {
               ...cuenta,
               saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos,
-              gastos_mes: gastosMes
+              gastos_mes: gastosMes,
+              invertido,
+              rendimiento
             } as CuentaConSaldo;
           })
         );
 
         setCuentas(cuentasConSaldo);
-      }
 
-      // Fetch current month totals
-      const currentMonth = format(new Date(), 'yyyy-MM');
-      const { data: currentMonthMovimientos } = await supabase
-        .from('movimientos')
-        .select('cantidad')
-        .eq('user_id', user.id)
-        .eq('mes_referencia', currentMonth);
+        // Calculate patrimonio for last 6 months using snapshots
+        const now = new Date();
+        const currentMonth = format(now, 'yyyy-MM');
+        const sixMonthsAgo = format(subMonths(now, 5), 'yyyy-MM');
 
-      if (currentMonthMovimientos) {
-        const ingresos = currentMonthMovimientos
-          .filter(m => Number(m.cantidad) > 0)
-          .reduce((sum, m) => sum + Number(m.cantidad), 0);
-        const gastos = currentMonthMovimientos
-          .filter(m => Number(m.cantidad) < 0)
-          .reduce((sum, m) => sum + Math.abs(Number(m.cantidad)), 0);
-        
-        setCurrentMonthTotals({ ingresos, gastos });
-      }
+        // Fetch snapshots for last 6 months
+        const { data: snapshots } = await supabase
+          .from('snapshots_patrimonio')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('mes', sixMonthsAgo)
+          .order('mes');
 
-      // Calculate patrimonio for last 6 months
-      const patrimonioHistory: PatrimonioData[] = [];
-      const now = new Date();
-      
-      for (let i = 5; i >= 0; i--) {
-        const monthDate = startOfMonth(subMonths(now, i));
-        const monthEnd = startOfMonth(subMonths(now, i - 1));
-        const monthStr = format(monthDate, 'yyyy-MM');
-        const monthLabel = format(monthDate, 'MMM', { locale: es });
+        // Group by month and sum balances
+        const patrimonioByMonth = new Map<string, number>();
 
-        // Calculate patrimonio at end of month
-        let patrimonio = 0;
-        
-        if (cuentasData) {
-          for (const cuenta of cuentasData) {
-            const { data: movimientos } = await supabase
-              .from('movimientos')
-              .select('cantidad')
-              .eq('cuenta_id', cuenta.id)
-              .lt('fecha', format(monthEnd, 'yyyy-MM-dd'));
+        snapshots?.forEach(snap => {
+          const balance = snap.saldo_registrado ?? snap.saldo_calculado ?? 0;
+          const current = patrimonioByMonth.get(snap.mes) || 0;
+          patrimonioByMonth.set(snap.mes, current + Number(balance));
+        });
 
-            const sumaMovimientos = movimientos?.reduce(
-              (sum, m) => sum + Number(m.cantidad),
-              0
-            ) || 0;
+        // Add current month with live calculated balance
+        const currentMonthPatrimonio = cuentasConSaldo.reduce(
+          (sum, c) => sum + c.saldo_actual,
+          0
+        );
+        patrimonioByMonth.set(currentMonth, currentMonthPatrimonio);
 
-            patrimonio += Number(cuenta.saldo_inicial) + sumaMovimientos;
+        // Build chart data for last 6 months
+        const patrimonioHistory: PatrimonioData[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const monthDate = startOfMonth(subMonths(now, i));
+          const monthStr = format(monthDate, 'yyyy-MM');
+          const monthLabel = format(monthDate, 'MMM', { locale: es });
+          const patrimonio = patrimonioByMonth.get(monthStr) || 0;
+
+          patrimonioHistory.push({
+            mes: monthLabel,
+            patrimonio
+          });
+
+          // Store previous month patrimonio
+          if (i === 1) {
+            setMesAnteriorPatrimonio(patrimonio);
           }
         }
 
-        patrimonioHistory.push({
-          mes: monthLabel,
-          patrimonio
-        });
+        setPatrimonioData(patrimonioHistory);
 
-        // Store previous month patrimonio
-        if (i === 1) {
-          setMesAnteriorPatrimonio(patrimonio);
+        // Fetch current month totals
+        const { data: currentMonthMovimientos } = await supabase
+          .from('movimientos')
+          .select('cantidad')
+          .eq('user_id', user.id)
+          .eq('mes_referencia', currentMonth);
+
+        if (currentMonthMovimientos) {
+          const ingresos = currentMonthMovimientos
+            .filter(m => Number(m.cantidad) > 0)
+            .reduce((sum, m) => sum + Number(m.cantidad), 0);
+          const gastos = currentMonthMovimientos
+            .filter(m => Number(m.cantidad) < 0)
+            .reduce((sum, m) => sum + Math.abs(Number(m.cantidad)), 0);
+
+          setCurrentMonthTotals({ ingresos, gastos });
         }
       }
 
-      setPatrimonioData(patrimonioHistory);
       setLoading(false);
     };
 
@@ -340,20 +368,32 @@ export default function Dashboard() {
                     </h3>
                     <div className="space-y-2">
                       {accountsByType.inversion.map((cuenta) => (
-                        <div 
+                        <div
                           key={cuenta.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                          className="p-3 rounded-lg bg-muted/50"
                         >
-                          <div className="flex items-center gap-3">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: cuenta.color }}
-                            />
-                            <span>{cuenta.nombre}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: cuenta.color }}
+                              />
+                              <span>{cuenta.nombre}</span>
+                            </div>
+                            <span className="font-medium">
+                              {formatCurrency(cuenta.saldo_actual)}
+                            </span>
                           </div>
-                          <span className="font-medium">
-                            {formatCurrency(cuenta.saldo_actual)}
-                          </span>
+                          <p className="text-xs text-muted-foreground mt-1 ml-6">
+                            Invertido: {formatCurrency(cuenta.invertido || 0)}
+                            {' • '}
+                            Rendimiento: <span className={cn(
+                              cuenta.rendimiento && cuenta.rendimiento >= 0 ? 'text-green-600' : 'text-destructive'
+                            )}>
+                              {cuenta.rendimiento && cuenta.rendimiento >= 0 ? '+' : ''}
+                              {formatCurrency(cuenta.rendimiento || 0)}
+                            </span>
+                          </p>
                         </div>
                       ))}
                     </div>

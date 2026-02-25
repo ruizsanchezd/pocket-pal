@@ -4,13 +4,15 @@ import { gastoRecurrenteSchema, type GastoRecurrenteFormData } from '@/lib/valid
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
+  FormDescription
 } from '@/components/ui/form';
 import {
   Select,
@@ -57,16 +59,23 @@ export function GastoRecurrenteForm({
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || '',
       categoria_id: initialData?.categoria_id || '',
       subcategoria_id: initialData?.subcategoria_id || undefined,
-      notas: initialData?.notas || ''
+      notas: initialData?.notas || '',
+      is_transfer: initialData?.is_transfer || false,
+      destination_account_id: initialData?.destination_account_id || null
     }
   });
 
   const categoriaId = form.watch('categoria_id');
+  const isTransfer = form.watch('is_transfer');
+  const cuentaId = form.watch('cuenta_id');
 
-  // Filter categories (only gastos for recurring expenses)
+  // Filter categories (only gastos for recurring expenses, unless it's a transfer)
   const filteredCategorias = useMemo(() => {
+    if (isTransfer) {
+      return categorias.filter(c => !c.parent_id); // Show all parent categories for transfers
+    }
     return categorias.filter(c => !c.parent_id && c.tipo === 'gasto');
-  }, [categorias]);
+  }, [categorias, isTransfer]);
 
   // Get subcategories for selected category
   const subcategorias = useMemo(() => {
@@ -106,12 +115,14 @@ export function GastoRecurrenteForm({
             name="cantidad"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Cantidad * (negativo = gasto)</FormLabel>
+                <FormLabel>
+                  {isTransfer ? 'Cantidad a transferir *' : 'Cantidad * (negativo = gasto)'}
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     step="0.01"
-                    placeholder="-900"
+                    placeholder={isTransfer ? '200' : '-900'}
                     {...field}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -176,6 +187,59 @@ export function GastoRecurrenteForm({
             </FormItem>
           )}
         />
+
+        <FormField
+          control={form.control}
+          name="is_transfer"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <FormLabel>Transferencia entre cuentas</FormLabel>
+                <FormDescription className="text-xs">
+                  Mueve dinero de una cuenta a otra
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch checked={field.value} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {isTransfer && (
+          <FormField
+            control={form.control}
+            name="destination_account_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Cuenta destino *</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ''}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona cuenta destino" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {cuentas
+                      .filter(c => c.id !== cuentaId)
+                      .map((cuenta) => (
+                        <SelectItem key={cuenta.id} value={cuenta.id}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: cuenta.color }}
+                            />
+                            {cuenta.nombre}
+                          </div>
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
 
         <FormField
           control={form.control}

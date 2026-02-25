@@ -139,33 +139,34 @@ export default function Movimientos() {
         .eq('mes_referencia', currentMonth)
         .order('fecha', { ascending: true });
 
-      if (movimientosData) {
-        // Map accounts and categories to movements
-        const movimientosConRelaciones = movimientosData.map(m => ({
-          ...m,
-          cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
-          categoria: categoriasData?.find(c => c.id === m.categoria_id),
-          subcategoria: m.subcategoria_id 
-            ? categoriasData?.find(c => c.id === m.subcategoria_id) 
-            : null
-        })) as MovimientoConRelaciones[];
-        
-        setMovimientos(movimientosConRelaciones);
+      // Map movements if they exist
+      const movimientosConRelaciones = movimientosData
+        ? movimientosData.map(m => ({
+            ...m,
+            cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
+            categoria: categoriasData?.find(c => c.id === m.categoria_id),
+            subcategoria: m.subcategoria_id
+              ? categoriasData?.find(c => c.id === m.subcategoria_id)
+              : null
+          })) as MovimientoConRelaciones[]
+        : [];
 
-        // Check if we should show recurrente banner
-        const hasRecurrentes = movimientosData.some(m => m.es_recurrente);
-        if (!hasRecurrentes && currentMonth === format(new Date(), 'yyyy-MM')) {
-          const { data: templates } = await supabase
-            .from('gastos_recurrentes')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('activo', true)
-            .limit(1);
-          
-          setShowRecurrenteBanner(!!templates && templates.length > 0);
-        } else {
-          setShowRecurrenteBanner(false);
-        }
+      setMovimientos(movimientosConRelaciones);
+
+      // Check if we should show recurrente banner
+      // Show banner if: in current month AND no recurring movements AND has active templates
+      const hasRecurrentes = movimientosData?.some(m => m.es_recurrente) || false;
+      if (!hasRecurrentes && currentMonth === format(new Date(), 'yyyy-MM')) {
+        const { data: templates } = await supabase
+          .from('gastos_recurrentes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('activo', true)
+          .limit(1);
+
+        setShowRecurrenteBanner(!!templates && templates.length > 0);
+      } else {
+        setShowRecurrenteBanner(false);
       }
       
       setLoading(false);
@@ -307,19 +308,46 @@ export default function Movimientos() {
 
     // Create movements from templates
     const date = parse(currentMonth, 'yyyy-MM', new Date());
-    const movimientosToCreate = templates.map(t => ({
-      user_id: user.id,
-      fecha: format(new Date(date.getFullYear(), date.getMonth(), t.dia_del_mes || 1), 'yyyy-MM-dd'),
-      concepto: t.concepto,
-      cantidad: t.cantidad,
-      cuenta_id: t.cuenta_id,
-      categoria_id: t.categoria_id,
-      subcategoria_id: t.subcategoria_id,
-      notas: t.notas,
-      es_recurrente: true,
-      recurrente_template_id: t.id,
-      mes_referencia: currentMonth
-    }));
+    const movimientosToCreate: any[] = [];
+
+    templates.forEach(t => {
+      const fechaStr = format(
+        new Date(date.getFullYear(), date.getMonth(), t.dia_del_mes || 1),
+        'yyyy-MM-dd'
+      );
+
+      // Origin movement (always created)
+      movimientosToCreate.push({
+        user_id: user.id,
+        fecha: fechaStr,
+        concepto: t.concepto,
+        cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
+        cuenta_id: t.cuenta_id,
+        categoria_id: t.categoria_id,
+        subcategoria_id: t.subcategoria_id,
+        notas: t.notas,
+        es_recurrente: true,
+        recurrente_template_id: t.id,
+        mes_referencia: currentMonth
+      });
+
+      // If transfer, create the destination movement
+      if (t.is_transfer && t.destination_account_id) {
+        movimientosToCreate.push({
+          user_id: user.id,
+          fecha: fechaStr,
+          concepto: t.concepto,
+          cantidad: Math.abs(t.cantidad),
+          cuenta_id: t.destination_account_id,
+          categoria_id: t.categoria_id,
+          subcategoria_id: t.subcategoria_id,
+          notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
+          es_recurrente: true,
+          recurrente_template_id: t.id,
+          mes_referencia: currentMonth
+        });
+      }
+    });
 
     const { data: created, error } = await supabase
       .from('movimientos')
@@ -354,7 +382,7 @@ export default function Movimientos() {
     setShowRecurrenteBanner(false);
     toast({
       title: 'Gastos recurrentes generados',
-      description: `Se crearon ${templates.length} movimientos`
+      description: `Se crearon ${movimientosToCreate.length} movimientos`
     });
   };
 
@@ -494,16 +522,43 @@ export default function Movimientos() {
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
               ) : movimientos.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
                   <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">No hay movimientos este mes</p>
-                  <p className="text-muted-foreground mb-4">
-                    Empieza añadiendo tu primer movimiento
-                  </p>
-                  <Button onClick={handleCreateMovimiento}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Añadir primer movimiento
-                  </Button>
+
+                  {showRecurrenteBanner && (
+                    <Alert className="max-w-md">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="flex flex-col gap-3">
+                        <span>¿Generar gastos recurrentes para este mes?</span>
+                        <div className="flex gap-2 justify-center">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowRecurrenteBanner(false)}
+                          >
+                            No
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={handleGenerateRecurrentes}
+                          >
+                            Sí, generar
+                          </Button>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div>
+                    <p className="text-muted-foreground mb-4">
+                      {showRecurrenteBanner ? 'O empieza añadiendo un movimiento manual' : 'Empieza añadiendo tu primer movimiento'}
+                    </p>
+                    <Button onClick={handleCreateMovimiento}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Añadir {showRecurrenteBanner ? 'movimiento manual' : 'primer movimiento'}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>

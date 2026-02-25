@@ -24,10 +24,12 @@ import { useState } from 'react';
 
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
+  saldo_actual?: number;
 }
 
 interface CuentaFormProps {
   initialData?: CuentaConConfig;
+  saldoActual?: number; // Current calculated balance (for edit mode)
   onSubmit: (data: CuentaFormData) => Promise<void>;
   onCancel: () => void;
 }
@@ -37,7 +39,7 @@ const COLORS = [
   '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
 ];
 
-export function CuentaForm({ initialData, onSubmit, onCancel }: CuentaFormProps) {
+export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: CuentaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<CuentaFormData>({
@@ -47,9 +49,11 @@ export function CuentaForm({ initialData, onSubmit, onCancel }: CuentaFormProps)
       tipo: initialData?.tipo || 'corriente',
       divisa: initialData?.divisa || 'EUR',
       saldo_inicial: initialData?.saldo_inicial ? Number(initialData.saldo_inicial) : 0,
+      saldo_actual: saldoActual !== undefined ? saldoActual : undefined,
+      capital_inicial_invertido: initialData?.capital_inicial_invertido ? Number(initialData.capital_inicial_invertido) : 0,
       color: initialData?.color || '#3B82F6',
-      recarga_mensual: initialData?.monedero_config?.recarga_mensual 
-        ? Number(initialData.monedero_config.recarga_mensual) 
+      recarga_mensual: initialData?.monedero_config?.recarga_mensual
+        ? Number(initialData.monedero_config.recarga_mensual)
         : undefined
     }
   });
@@ -129,24 +133,46 @@ export function CuentaForm({ initialData, onSubmit, onCancel }: CuentaFormProps)
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="saldo_inicial"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Saldo inicial</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {initialData ? (
+            <FormField
+              control={form.control}
+              name="saldo_actual"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Saldo actual</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      value={field.value ?? ''}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : (
+            <FormField
+              control={form.control}
+              name="saldo_inicial"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Saldo inicial</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
 
         {tipo === 'monedero' && (
@@ -167,6 +193,32 @@ export function CuentaForm({ initialData, onSubmit, onCancel }: CuentaFormProps)
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {tipo === 'inversion' && (
+          <FormField
+            control={form.control}
+            name="capital_inicial_invertido"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Capital inicial invertido</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="10000"
+                    {...field}
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    value={field.value ?? 0}
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-muted-foreground">
+                  Dinero que ya tenías invertido antes de usar la app
+                </p>
               </FormItem>
             )}
           />
