@@ -204,10 +204,26 @@ export default function Movimientos() {
         description: 'No se pudo eliminar el movimiento'
       });
     } else {
-      setMovimientos(movimientos.filter(m => m.id !== id));
-      toast({
-        title: 'Movimiento eliminado'
-      });
+      const updatedMovimientos = movimientos.filter(m => m.id !== id);
+      setMovimientos(updatedMovimientos);
+      toast({ title: 'Movimiento eliminado' });
+
+      // Re-evaluate banner: if we deleted the last es_recurrente in the current month,
+      // check if active templates exist and show the banner again
+      const isCurrentMonth = currentMonth === format(new Date(), 'yyyy-MM');
+      const deletedWasRecurrente = movimientos.find(m => m.id === id)?.es_recurrente;
+      if (isCurrentMonth && deletedWasRecurrente) {
+        const stillHasRecurrentes = updatedMovimientos.some(m => m.es_recurrente);
+        if (!stillHasRecurrentes) {
+          const { data: templates } = await supabase
+            .from('gastos_recurrentes')
+            .select('id')
+            .eq('user_id', user!.id)
+            .eq('activo', true)
+            .limit(1);
+          setShowRecurrenteBanner(!!templates && templates.length > 0);
+        }
+      }
     }
     setDeleteConfirm(null);
   };

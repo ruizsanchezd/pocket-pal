@@ -134,8 +134,10 @@ export function DistribucionSection() {
       categoryTotals.set(categoria.id, existing);
     });
 
-    // Sort by absolute value descending
-    const sorted = Array.from(categoryTotals.values()).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    // Sort by absolute value descending, always use absolute values for display
+    const sorted = Array.from(categoryTotals.values())
+      .map(item => ({ ...item, total: Math.abs(item.total) }))
+      .sort((a, b) => b.total - a.total);
 
     return sorted;
   }, [movimientos, categorias]);
@@ -162,8 +164,10 @@ export function DistribucionSection() {
       }
     });
 
-    // Sort by absolute value descending
-    const sorted = Array.from(subcategoryTotals.values()).sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+    // Sort by absolute value descending, always use absolute values for display
+    const sorted = Array.from(subcategoryTotals.values())
+      .map(item => ({ ...item, total: Math.abs(item.total) }))
+      .sort((a, b) => b.total - a.total);
 
     return sorted;
   }, [movimientos, categorias]);
@@ -171,15 +175,18 @@ export function DistribucionSection() {
   const formatCurrency = (amount: number) => {
     const symbol = profile?.divisa_principal === 'USD' ? '$' :
                    profile?.divisa_principal === 'GBP' ? '£' : '€';
-    return `${amount >= 0 ? '+' : ''}${amount.toLocaleString('es-ES', {
+    const abs = Math.abs(amount);
+    return `${abs.toLocaleString('es-ES', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}${symbol}`;
   };
 
-  // Get color for bar based on value
-  const getBarColor = (value: number) => {
-    return value >= 0 ? '#10b981' : '#ef4444';
+  // Get color for bar based on movement type
+  const getBarColor = (_value: number) => {
+    if (tipoMovimiento === 'gastos') return '#ef4444';
+    if (tipoMovimiento === 'ingresos') return '#10b981';
+    return '#10b981';
   };
 
   return (
@@ -305,7 +312,7 @@ export function DistribucionSection() {
                         <YAxis
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                          tickFormatter={(value) => `${Math.abs(value / 1000).toFixed(0)}k`}
                         />
                         <Tooltip
                           formatter={(value: number) => [formatCurrency(value), 'Total']}
@@ -353,7 +360,7 @@ export function DistribucionSection() {
                         <YAxis
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                          tickFormatter={(value) => `${Math.abs(value / 1000).toFixed(0)}k`}
                         />
                         <Tooltip
                           formatter={(value: number) => [formatCurrency(value), 'Total']}

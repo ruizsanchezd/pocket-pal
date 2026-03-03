@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, subMonths, startOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, differenceInMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [patrimonioData, setPatrimonioData] = useState<PatrimonioData[]>([]);
   const [mesAnteriorPatrimonio, setMesAnteriorPatrimonio] = useState(0);
+  const [hasMesAnteriorData, setHasMesAnteriorData] = useState(false);
   const [currentMonthTotals, setCurrentMonthTotals] = useState({
     ingresos: 0,
     gastos: 0
@@ -45,9 +46,9 @@ export default function Dashboard() {
   const metrics = useMemo(() => {
     const patrimonioTotal = cuentas.reduce((sum, c) => sum + c.saldo_actual, 0);
     const balanceMes = currentMonthTotals.ingresos - currentMonthTotals.gastos;
-    const variacion = patrimonioTotal - mesAnteriorPatrimonio;
-    const tasaAhorro = currentMonthTotals.ingresos > 0 
-      ? (balanceMes / currentMonthTotals.ingresos) * 100 
+    const variacion = hasMesAnteriorData ? patrimonioTotal - mesAnteriorPatrimonio : null;
+    const tasaAhorro = currentMonthTotals.ingresos > 0
+      ? (balanceMes / currentMonthTotals.ingresos) * 100
       : 0;
 
     return {
@@ -56,7 +57,7 @@ export default function Dashboard() {
       variacion,
       tasaAhorro
     };
-  }, [cuentas, currentMonthTotals, mesAnteriorPatrimonio]);
+  }, [cuentas, currentMonthTotals, mesAnteriorPatrimonio, hasMesAnteriorData]);
 
   // Fetch data
   useEffect(() => {
@@ -73,7 +74,15 @@ export default function Dashboard() {
         .eq('activa', true)
         .order('orden');
 
+      // Fetch monedero configs for recarga mensual calculation
+      const { data: monederoConfigs } = await supabase
+        .from('cuentas_monedero_config')
+        .select('*')
+        .eq('user_id', user.id);
+
       if (cuentasData) {
+        const now = new Date();
+
         // For each account, calculate current balance
         const cuentasConSaldo: CuentaConSaldo[] = await Promise.all(
           cuentasData.map(async (cuenta) => {
@@ -83,7 +92,7 @@ export default function Dashboard() {
               .eq('cuenta_id', cuenta.id);
 
             const sumaMovimientos = movimientos?.reduce(
-              (sum, m) => sum + Number(m.cantidad), 
+              (sum, m) => sum + Number(m.cantidad),
               0
             ) || 0;
 
@@ -119,9 +128,24 @@ export default function Dashboard() {
               rendimiento = saldoActual - invertido;
             }
 
+            // For monedero type, add accumulated monthly recargas
+            let recargaAcumulada = 0;
+            if (cuenta.tipo === 'monedero') {
+              const config = monederoConfigs?.find(c => c.cuenta_id === cuenta.id);
+              if (config && cuenta.created_at) {
+                // Count months from start of creation month to start of current month
+                // dia_recarga is always 1, so each month's recarga has already happened if we're past day 1
+                const meses = differenceInMonths(
+                  startOfMonth(now),
+                  startOfMonth(new Date(cuenta.created_at))
+                );
+                recargaAcumulada = config.recarga_mensual * meses;
+              }
+            }
+
             return {
               ...cuenta,
-              saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos,
+              saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos + recargaAcumulada,
               gastos_mes: gastosMes,
               invertido,
               rendimiento
@@ -132,7 +156,6 @@ export default function Dashboard() {
         setCuentas(cuentasConSaldo);
 
         // Calculate patrimonio for last 6 months using snapshots
-        const now = new Date();
         const currentMonth = format(now, 'yyyy-MM');
         const sixMonthsAgo = format(subMonths(now, 5), 'yyyy-MM');
 
@@ -175,7 +198,10 @@ export default function Dashboard() {
 
           // Store previous month patrimonio
           if (i === 1) {
+            const monthStr2 = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM');
+            const hasData = patrimonioByMonth.has(monthStr2);
             setMesAnteriorPatrimonio(patrimonio);
+            setHasMesAnteriorData(hasData);
           }
         }
 
@@ -288,19 +314,25 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-medium">
                   Vs Mes Anterior
                 </CardTitle>
-                {metrics.variacion >= 0 ? (
+                {metrics.variacion === null ? (
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                ) : metrics.variacion >= 0 ? (
                   <TrendingUp className="h-4 w-4 text-green-600" />
                 ) : (
                   <TrendingDown className="h-4 w-4 text-destructive" />
                 )}
               </CardHeader>
               <CardContent>
-                <div className={cn(
-                  "text-2xl font-bold",
-                  metrics.variacion >= 0 ? "text-green-600" : "text-destructive"
-                )}>
-                  {metrics.variacion >= 0 ? '+' : ''}{formatCurrency(metrics.variacion)}
-                </div>
+                {metrics.variacion === null ? (
+                  <div className="text-2xl font-bold text-muted-foreground">--</div>
+                ) : (
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    metrics.variacion >= 0 ? "text-green-600" : "text-destructive"
+                  )}>
+                    {metrics.variacion >= 0 ? '+' : ''}{formatCurrency(metrics.variacion)}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
