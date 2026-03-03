@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +41,6 @@ export function DistribucionSection() {
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
-  const scrollYRef = useRef(0);
 
   // Generate year options (current year ± 5 years)
   const anios = useMemo(() => {
@@ -79,7 +78,6 @@ export function DistribucionSection() {
     if (!user) return;
 
     const fetchData = async () => {
-      scrollYRef.current = window.scrollY;
       setLoading(true);
       try {
         // Fetch categories
@@ -115,9 +113,6 @@ export function DistribucionSection() {
         if (import.meta.env.DEV) console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: scrollYRef.current, behavior: 'instant' });
-        });
       }
     };
 
@@ -287,11 +282,12 @@ export function DistribucionSection() {
         </div>
 
         {/* Charts */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
+        <div className="relative">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-background/60 backdrop-blur-sm">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Category Chart */}
             <Card>
@@ -389,7 +385,7 @@ export function DistribucionSection() {
               </CardContent>
             </Card>
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );
