@@ -541,40 +541,11 @@ export default function Movimientos() {
                 <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
                   <Receipt className="h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-medium">No hay movimientos este mes</p>
-
-                  {showRecurrenteBanner && (
-                    <Alert className="max-w-md">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription className="flex flex-col gap-3">
-                        <span>¿Generar gastos recurrentes para este mes?</span>
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowRecurrenteBanner(false)}
-                          >
-                            No
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleGenerateRecurrentes}
-                          >
-                            Sí, generar
-                          </Button>
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div>
-                    <p className="text-muted-foreground mb-4">
-                      {showRecurrenteBanner ? 'O empieza añadiendo un movimiento manual' : 'Empieza añadiendo tu primer movimiento'}
-                    </p>
-                    <Button onClick={handleCreateMovimiento}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Añadir {showRecurrenteBanner ? 'movimiento manual' : 'primer movimiento'}
-                    </Button>
-                  </div>
+                  <p className="text-muted-foreground mb-4">Empieza añadiendo tu primer movimiento</p>
+                  <Button onClick={handleCreateMovimiento}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Añadir primer movimiento
+                  </Button>
                 </div>
               ) : (
                 <>
