@@ -134,13 +134,14 @@ export function DistribucionSection() {
       categoryTotals.set(categoria.id, existing);
     });
 
-    // Sort by absolute value descending, always use absolute values for display
+    // In 'todos' mode keep raw values (mixed bars); otherwise use absolute values
+    const normalize = (v: number) => tipoMovimiento === 'todos' ? v : Math.abs(v);
     const sorted = Array.from(categoryTotals.values())
-      .map(item => ({ ...item, total: Math.abs(item.total) }))
-      .sort((a, b) => b.total - a.total);
+      .map(item => ({ ...item, total: normalize(item.total) }))
+      .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 
     return sorted;
-  }, [movimientos, categorias]);
+  }, [movimientos, categorias, tipoMovimiento]);
 
   // Distribution by subcategory
   const subcategoriaData = useMemo(() => {
@@ -164,13 +165,14 @@ export function DistribucionSection() {
       }
     });
 
-    // Sort by absolute value descending, always use absolute values for display
+    // In 'todos' mode keep raw values (mixed bars); otherwise use absolute values
+    const normalize = (v: number) => tipoMovimiento === 'todos' ? v : Math.abs(v);
     const sorted = Array.from(subcategoryTotals.values())
-      .map(item => ({ ...item, total: Math.abs(item.total) }))
-      .sort((a, b) => b.total - a.total);
+      .map(item => ({ ...item, total: normalize(item.total) }))
+      .sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
 
     return sorted;
-  }, [movimientos, categorias]);
+  }, [movimientos, categorias, tipoMovimiento]);
 
   const formatCurrency = (amount: number) => {
     const symbol = profile?.divisa_principal === 'USD' ? '$' :
@@ -182,10 +184,10 @@ export function DistribucionSection() {
     })}${symbol}`;
   };
 
-  // Get color for bar based on movement type
-  const getBarColor = (_value: number) => {
+  // Get color for bar: in 'todos' mode use value sign; otherwise use movement type
+  const getBarColor = (value: number) => {
+    if (tipoMovimiento === 'todos') return value >= 0 ? '#10b981' : '#ef4444';
     if (tipoMovimiento === 'gastos') return '#ef4444';
-    if (tipoMovimiento === 'ingresos') return '#10b981';
     return '#10b981';
   };
 
