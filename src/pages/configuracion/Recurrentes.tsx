@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { GastoRecurrenteForm } from '@/components/configuracion/GastoRecurrenteForm';
 import { useToast } from '@/hooks/use-toast';
+import { useWebHaptics } from 'web-haptics/react';
 import { 
   Plus, 
   Pencil, 
@@ -36,6 +37,7 @@ interface GastoRecurrenteConRelaciones extends GastoRecurrente {
 export default function ConfigRecurrentes() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const haptic = useWebHaptics();
   
   const [gastos, setGastos] = useState<GastoRecurrenteConRelaciones[]>([]);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
@@ -209,7 +211,8 @@ export default function ConfigRecurrentes() {
       return;
     }
 
-    setGastos(gastos.map(g => 
+    haptic.trigger('light');
+    setGastos(gastos.map(g =>
       g.id === gasto.id ? { ...g, activo: !g.activo } : g
     ));
   };
@@ -227,6 +230,7 @@ export default function ConfigRecurrentes() {
         description: 'No se pudo eliminar el gasto recurrente'
       });
     } else {
+      haptic.trigger('success');
       setGastos(gastos.filter(g => g.id !== id));
       toast({ title: 'Gasto recurrente eliminado' });
     }

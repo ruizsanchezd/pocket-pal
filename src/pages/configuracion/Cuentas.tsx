@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog';
 import { CuentaForm } from '@/components/configuracion/CuentaForm';
 import { useToast } from '@/hooks/use-toast';
+import { useWebHaptics } from 'web-haptics/react';
 import {
   Plus,
   Pencil,
@@ -39,6 +40,7 @@ interface CuentaConConfig extends Cuenta {
 export default function ConfigCuentas() {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
+  const haptic = useWebHaptics();
   
   const [cuentas, setCuentas] = useState<CuentaConConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,6 +218,7 @@ export default function ConfigCuentas() {
             .eq('id', editingCuenta.monedero_config.id);
         }
 
+        haptic.trigger('success');
         toast({ title: 'Cuenta actualizada' });
       } else {
         // Create account
@@ -247,6 +250,7 @@ export default function ConfigCuentas() {
             });
         }
 
+        haptic.trigger('success');
         toast({ title: 'Cuenta creada' });
       }
 
@@ -307,7 +311,8 @@ export default function ConfigCuentas() {
       return;
     }
 
-    setCuentas(cuentas.map(c => 
+    haptic.trigger('light');
+    setCuentas(cuentas.map(c =>
       c.id === cuenta.id ? { ...c, activa: !c.activa } : c
     ));
   };
@@ -330,6 +335,7 @@ export default function ConfigCuentas() {
     }
 
     await refreshProfile();
+    haptic.trigger('light');
     toast({ title: 'Cuenta predeterminada actualizada' });
   };
 
@@ -348,6 +354,7 @@ export default function ConfigCuentas() {
       supabase.from('cuentas').update({ orden: currentIndex }).eq('id', newCuentas[currentIndex].id)
     ]);
 
+    haptic.trigger('light');
     setCuentas(newCuentas);
   };
 
@@ -377,6 +384,7 @@ export default function ConfigCuentas() {
       await refreshProfile();
     }
 
+    haptic.trigger('success');
     setCuentas(cuentas.filter(c => c.id !== cuenta.id));
     setDeleteConfirm(null);
     toast({ title: 'Cuenta eliminada' });

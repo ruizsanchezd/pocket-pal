@@ -21,6 +21,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { useState } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
@@ -41,6 +42,7 @@ const COLORS = [
 
 export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: CuentaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const haptic = useWebHaptics();
 
   const form = useForm<CuentaFormData>({
     resolver: zodResolver(cuentaSchema),
@@ -61,6 +63,7 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
   const tipo = form.watch('tipo');
 
   const handleSubmit = async (data: CuentaFormData) => {
+    haptic.trigger('medium');
     setIsSubmitting(true);
     try {
       await onSubmit(data);
@@ -242,7 +245,7 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
                           : 'border-transparent hover:scale-105'
                       }`}
                       style={{ backgroundColor: color }}
-                      onClick={() => field.onChange(color)}
+                      onClick={() => { haptic.trigger('light'); field.onChange(color); }}
                     />
                   ))}
                 </div>

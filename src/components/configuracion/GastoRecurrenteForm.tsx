@@ -24,6 +24,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, GastoRecurrente } from '@/types/database';
 import { useState, useMemo } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +50,7 @@ export function GastoRecurrenteForm({
 }: GastoRecurrenteFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const haptic = useWebHaptics();
 
   const form = useForm<GastoRecurrenteFormData>({
     resolver: zodResolver(gastoRecurrenteSchema),
@@ -84,6 +86,7 @@ export function GastoRecurrenteForm({
   }, [categorias, categoriaId]);
 
   const handleSubmit = async (data: GastoRecurrenteFormData) => {
+    haptic.trigger('medium');
     setIsSubmitting(true);
     try {
       await onSubmit(data);
@@ -200,7 +203,7 @@ export function GastoRecurrenteForm({
                 </FormDescription>
               </div>
               <FormControl>
-                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                <Switch checked={field.value} onCheckedChange={(v) => { haptic.trigger('light'); field.onChange(v); }} />
               </FormControl>
             </FormItem>
           )}

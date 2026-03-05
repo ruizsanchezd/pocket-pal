@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -35,6 +36,7 @@ import { Link } from 'react-router-dom';
 export default function ConfigCategorias() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const haptic = useWebHaptics();
   
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +131,7 @@ export default function ConfigCategorias() {
             : c
         ));
 
+        haptic.trigger('success');
         toast({ title: 'Categoría actualizada' });
       } else {
         // Create category
@@ -161,6 +164,7 @@ export default function ConfigCategorias() {
         if (error) throw error;
 
         setCategorias([...categorias, newCategoria as Categoria]);
+        haptic.trigger('success');
         toast({ title: 'Categoría creada' });
       }
 
@@ -220,6 +224,7 @@ export default function ConfigCategorias() {
         description: 'No se pudo eliminar la categoría'
       });
     } else {
+      haptic.trigger('success');
       setCategorias(categorias.filter(c => c.id !== categoria.id));
       toast({ title: 'Categoría eliminada' });
     }
@@ -319,7 +324,7 @@ export default function ConfigCategorias() {
               </Button>
             </CardHeader>
             <CardContent>
-              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as CategoriaTipo)}>
+              <Tabs value={activeTab} onValueChange={(v) => { haptic.trigger('selection'); setActiveTab(v as CategoriaTipo); }}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="gasto">Gastos</TabsTrigger>
                   <TabsTrigger value="ingreso">Ingresos</TabsTrigger>

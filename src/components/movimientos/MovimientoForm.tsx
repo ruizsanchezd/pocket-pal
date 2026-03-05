@@ -30,6 +30,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, MovimientoConRelaciones } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useState, useMemo } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,6 +56,7 @@ export function MovimientoForm({
 }: MovimientoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
+  const haptic = useWebHaptics();
 
   const form = useForm<MovimientoFormData>({
     resolver: zodResolver(movimientoSchema),
@@ -88,6 +90,7 @@ export function MovimientoForm({
   }, [categorias, categoriaId]);
 
   const handleSubmit = async (data: MovimientoFormData) => {
+    haptic.trigger('medium');
     setIsSubmitting(true);
     try {
       await onSubmit(data);

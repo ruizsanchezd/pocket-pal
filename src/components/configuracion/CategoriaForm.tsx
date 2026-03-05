@@ -15,6 +15,7 @@ import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Loader2 } from 'lucide-react';
 import { Categoria, CategoriaTipo } from '@/types/database';
 import { useState } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 
 interface CategoriaFormProps {
   initialData?: Categoria;
@@ -37,6 +38,7 @@ export function CategoriaForm({
   onCancel 
 }: CategoriaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const haptic = useWebHaptics();
 
   const form = useForm<CategoriaFormData>({
     resolver: zodResolver(categoriaSchema),
@@ -49,6 +51,7 @@ export function CategoriaForm({
   });
 
   const handleSubmit = async (data: CategoriaFormData) => {
+    haptic.trigger('medium');
     setIsSubmitting(true);
     try {
       await onSubmit(data);
@@ -95,7 +98,7 @@ export function CategoriaForm({
                           : 'border-transparent hover:scale-105'
                       }`}
                       style={{ backgroundColor: color }}
-                      onClick={() => field.onChange(color)}
+                      onClick={() => { haptic.trigger('light'); field.onChange(color); }}
                     />
                   ))}
                 </div>

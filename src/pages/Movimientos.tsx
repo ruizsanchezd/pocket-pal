@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useWebHaptics } from 'web-haptics/react';
 import { format, parse, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +51,7 @@ import { downloadFile, generateMovimientosCSV } from '@/lib/export';
 export default function Movimientos() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const haptic = useWebHaptics();
   
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([]);
@@ -176,6 +178,7 @@ export default function Movimientos() {
   }, [user, currentMonth]);
 
   const navigateMonth = (direction: 'prev' | 'next') => {
+    haptic.trigger('selection');
     const date = parse(currentMonth, 'yyyy-MM', new Date());
     const newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1);
     setCurrentMonth(format(newDate, 'yyyy-MM'));
@@ -204,6 +207,7 @@ export default function Movimientos() {
         description: 'No se pudo eliminar el movimiento'
       });
     } else {
+      haptic.trigger('success');
       const updatedMovimientos = movimientos.filter(m => m.id !== id);
       setMovimientos(updatedMovimientos);
       toast({ title: 'Movimiento eliminado' });
