@@ -557,8 +557,8 @@ export default function Movimientos() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-[100px]">Fecha</TableHead>
+                        <TableHead className="text-right pr-8">Cantidad</TableHead>
                         <TableHead>Concepto</TableHead>
-                        <TableHead className="text-right">Cantidad</TableHead>
                         <TableHead className="hidden md:table-cell">Cuenta</TableHead>
                         <TableHead className="hidden md:table-cell">Categoría</TableHead>
                         <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
@@ -571,6 +571,12 @@ export default function Movimientos() {
                         <TableCell className="font-medium">
                           {format(new Date(movimiento.fecha), 'dd/MM')}
                         </TableCell>
+                        <TableCell className={cn(
+                          "text-right font-medium pr-8",
+                          movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
+                        )}>
+                          {formatCurrency(Number(movimiento.cantidad))}
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span>{movimiento.concepto}</span>
@@ -580,12 +586,6 @@ export default function Movimientos() {
                               </span>
                             )}
                           </div>
-                        </TableCell>
-                        <TableCell className={cn(
-                          "text-right font-medium",
-                          movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
-                        )}>
-                          {formatCurrency(Number(movimiento.cantidad))}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-1.5">
