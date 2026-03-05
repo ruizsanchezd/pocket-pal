@@ -588,18 +588,33 @@ export default function Movimientos() {
                           {formatCurrency(Number(movimiento.cantidad))}
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          <span
-                            className="px-2 py-1 rounded text-xs"
-                            style={{ backgroundColor: `${movimiento.cuenta?.color}20` }}
-                          >
-                            {movimiento.cuenta?.nombre}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <div
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: movimiento.cuenta?.color }}
+                            />
+                            <span className="text-sm">{movimiento.cuenta?.nombre}</span>
+                          </div>
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
-                          {movimiento.categoria?.nombre}
+                          {movimiento.categoria && (
+                            <span
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
+                            >
+                              {movimiento.categoria.nombre}
+                            </span>
+                          )}
                         </TableCell>
-                        <TableCell className="hidden md:table-cell text-muted-foreground">
-                          {movimiento.subcategoria?.nombre}
+                        <TableCell className="hidden md:table-cell">
+                          {movimiento.subcategoria && (
+                            <span
+                              className="px-2 py-1 rounded text-xs font-medium"
+                              style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
+                            >
+                              {movimiento.subcategoria.nombre}
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
