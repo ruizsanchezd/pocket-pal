@@ -288,7 +288,7 @@ export function DistribucionSection() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           )}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Category Chart */}
             <Card>
               <CardHeader>
@@ -316,6 +316,7 @@ export function DistribucionSection() {
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                           tickFormatter={(value) => `${Math.abs(value / 1000).toFixed(0)}k`}
+                          width={28}
                         />
                         <Tooltip
                           formatter={(value: number) => [formatCurrency(value), 'Total']}
@@ -364,6 +365,7 @@ export function DistribucionSection() {
                           className="text-xs"
                           tick={{ fill: 'hsl(var(--muted-foreground))' }}
                           tickFormatter={(value) => `${Math.abs(value / 1000).toFixed(0)}k`}
+                          width={28}
                         />
                         <Tooltip
                           formatter={(value: number) => [formatCurrency(value), 'Total']}

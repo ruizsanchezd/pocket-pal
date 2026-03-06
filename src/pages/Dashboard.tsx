@@ -376,7 +376,7 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2">
             {/* Accounts list */}
             <Card>
               <CardHeader>
@@ -518,10 +518,11 @@ export default function Dashboard() {
                         className="text-xs"
                         tick={{ fill: 'hsl(var(--muted-foreground))' }}
                       />
-                      <YAxis 
+                      <YAxis
                         className="text-xs"
                         tick={{ fill: 'hsl(var(--muted-foreground))' }}
                         tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                        width={28}
                       />
                       <Tooltip 
                         formatter={(value: number) => [formatCurrency(value), 'Patrimonio']}

@@ -16,6 +16,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface CreatableSelectProps {
   options: { value: string; label: string; color?: string }[];
@@ -40,6 +48,7 @@ export function CreatableSelect({
   allowNone = false,
   emptyText = "No se encontraron resultados",
 }: CreatableSelectProps) {
+  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<"select" | "create">("select");
   const [createValue, setCreateValue] = React.useState("");
@@ -49,7 +58,6 @@ export function CreatableSelect({
   const selectedOption = options.find((option) => option.value === value);
 
   const handleCreate = async () => {
-    // Validation
     const trimmedValue = createValue.trim();
 
     if (trimmedValue.length < 2) {
@@ -57,7 +65,6 @@ export function CreatableSelect({
       return;
     }
 
-    // Check for duplicates (case-insensitive)
     const isDuplicate = options.some(
       (opt) => opt.label.toLowerCase() === trimmedValue.toLowerCase()
     );
@@ -81,7 +88,7 @@ export function CreatableSelect({
       } else {
         setError("Error al crear. Intenta de nuevo.");
       }
-    } catch (err) {
+    } catch {
       setError("Error al crear. Intenta de nuevo.");
     } finally {
       setIsCreating(false);
@@ -97,48 +104,163 @@ export function CreatableSelect({
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      // Reset to select mode when closing
       setMode("select");
       setCreateValue("");
       setError("");
     }
   };
 
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
+  const triggerButton = (
+    <Button
+      variant="outline"
+      role="combobox"
+      aria-expanded={open}
+      className="w-full justify-between"
+      disabled={disabled}
+    >
+      {selectedOption ? (
+        selectedOption.color ? (
+          <span
+            className="px-2 py-0.5 rounded text-xs font-medium"
+            style={{
+              backgroundColor: `${selectedOption.color}25`,
+              color: selectedOption.color,
+              filter: "brightness(0.85)",
+            }}
+          >
+            {selectedOption.label}
+          </span>
+        ) : (
+          selectedOption.label
+        )
+      ) : (
+        <span className="text-muted-foreground">{placeholder}</span>
+      )}
+      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+    </Button>
+  );
+
+  const createForm = (
+    <div className="p-4 space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Nombre</label>
+        <Input
+          value={createValue}
+          onChange={(e) => {
+            setCreateValue(e.target.value);
+            setError("");
+          }}
+          placeholder="Introduce el nombre..."
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              handleCreate();
+            } else if (e.key === "Escape") {
+              handleCancel();
+            }
+          }}
+          disabled={isCreating}
+        />
+        {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+      <div className="flex justify-end gap-2">
         <Button
           variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-          disabled={disabled}
+          size="sm"
+          onClick={handleCancel}
+          disabled={isCreating}
         >
-          {selectedOption ? (
-            selectedOption.color ? (
-              <span
-                className="px-2 py-0.5 rounded text-xs font-medium"
-                style={{
-                  backgroundColor: `${selectedOption.color}25`,
-                  color: selectedOption.color,
-                  filter: 'brightness(0.85)'
-                }}
-              >
-                {selectedOption.label}
-              </span>
-            ) : (
-              selectedOption.label
-            )
-          ) : (
-            placeholder
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <X className="mr-1 h-3 w-3" />
+          Cancelar
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+        <Button
+          size="sm"
+          onClick={handleCreate}
+          disabled={isCreating || !createValue.trim()}
+        >
+          <Plus className="mr-1 h-3 w-3" />
+          {isCreating ? "Creando..." : "Crear"}
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={handleOpenChange}>
+        <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{placeholder}</DrawerTitle>
+          </DrawerHeader>
+          {mode === "select" ? (
+            <div className="overflow-y-auto px-4 pb-8">
+              {allowNone && (
+                <button
+                  className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
+                  onClick={() => {
+                    onValueChange("");
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("h-4 w-4 shrink-0", value === "" ? "opacity-100" : "opacity-0")} />
+                  Ninguna
+                </button>
+              )}
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                  onClick={() => {
+                    onValueChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                  {option.color ? (
+                    <span
+                      className="px-2 py-0.5 rounded text-sm font-medium"
+                      style={{
+                        backgroundColor: `${option.color}25`,
+                        color: option.color,
+                        filter: "brightness(0.85)",
+                      }}
+                    >
+                      {option.label}
+                    </span>
+                  ) : (
+                    <span className="text-base">{option.label}</span>
+                  )}
+                </button>
+              ))}
+              <button
+                className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 text-primary active:bg-accent"
+                onClick={() => setMode("create")}
+              >
+                <Plus className="h-4 w-4 shrink-0" />
+                <span className="text-base">{createLabel}</span>
+              </button>
+            </div>
+          ) : (
+            createForm
+          )}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+      >
         {mode === "select" ? (
           <Command>
-            <CommandInput placeholder={`Buscar...`} />
+            <CommandInput placeholder="Buscar..." />
             <CommandList>
               <CommandEmpty>{emptyText}</CommandEmpty>
               <CommandGroup>
@@ -180,7 +302,7 @@ export function CreatableSelect({
                         style={{
                           backgroundColor: `${option.color}25`,
                           color: option.color,
-                          filter: 'brightness(0.85)'
+                          filter: "brightness(0.85)",
                         }}
                       >
                         {option.label}
@@ -201,51 +323,7 @@ export function CreatableSelect({
             </CommandList>
           </Command>
         ) : (
-          <div className="p-4 space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nombre</label>
-              <Input
-                value={createValue}
-                onChange={(e) => {
-                  setCreateValue(e.target.value);
-                  setError("");
-                }}
-                placeholder="Introduce el nombre..."
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleCreate();
-                  } else if (e.key === "Escape") {
-                    handleCancel();
-                  }
-                }}
-                disabled={isCreating}
-              />
-              {error && (
-                <p className="text-sm text-destructive">{error}</p>
-              )}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancel}
-                disabled={isCreating}
-              >
-                <X className="mr-1 h-3 w-3" />
-                Cancelar
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleCreate}
-                disabled={isCreating || !createValue.trim()}
-              >
-                <Plus className="mr-1 h-3 w-3" />
-                {isCreating ? "Creando..." : "Crear"}
-              </Button>
-            </div>
-          </div>
+          createForm
         )}
       </PopoverContent>
     </Popover>

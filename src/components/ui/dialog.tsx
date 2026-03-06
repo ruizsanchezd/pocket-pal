@@ -34,7 +34,7 @@ const DialogContent = React.forwardRef<
 
   return (
     <DialogPortal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 overflow-y-auto overflow-x-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
         <div className="flex flex-col min-h-full items-center">
 
           {/* Zona de cierre: cubre el espacio superior hasta la card, mismo ancho que la card */}

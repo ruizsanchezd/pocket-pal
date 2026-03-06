@@ -521,9 +521,9 @@ export default function Movimientos() {
                   Movimientos
                 </CardTitle>
                 {movimientos.length > 0 && (
-                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  <div className="flex flex-row gap-2 w-full sm:w-auto">
                     <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
-                      <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectTrigger className="flex-1 sm:w-[150px]">
                         <SelectValue>
                           {filtroCategoria === '__all__' ? (
                             'Categoría'
@@ -556,7 +556,7 @@ export default function Movimientos() {
                     </Select>
 
                     <Select value={filtroSubcategoria} onValueChange={setFiltroSubcategoria}>
-                      <SelectTrigger className="w-full sm:w-[150px]">
+                      <SelectTrigger className="flex-1 sm:w-[150px]">
                         <SelectValue>
                           {filtroSubcategoria === '__all__' ? (
                             'Subcategoría'
@@ -635,22 +635,12 @@ export default function Movimientos() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <span className={cn(
-                            "font-semibold text-sm",
-                            movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
-                          )}>
-                            {formatCurrency(Number(movimiento.cantidad))}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive shrink-0"
-                            onClick={(e) => { e.stopPropagation(); setDeleteConfirm(movimiento.id); }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        <span className={cn(
+                          "font-semibold text-sm shrink-0",
+                          movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
+                        )}>
+                          {formatCurrency(Number(movimiento.cantidad))}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -774,7 +764,7 @@ export default function Movimientos() {
 
           {/* Create/Edit Modal */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="sm:max-w-md max-sm:fixed max-sm:inset-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:overflow-y-auto">
+            <DialogContent className="sm:max-w-md w-full">
               <DialogHeader>
                 <DialogTitle>
                   {editingMovimiento ? 'Editar Movimiento' : 'Nuevo Movimiento'}
