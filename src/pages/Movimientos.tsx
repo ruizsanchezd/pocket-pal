@@ -417,10 +417,10 @@ export default function Movimientos() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
+        <div className="space-y-6 pb-24 sm:pb-0">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-2">
+          <div className="flex sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
               <Button
                 variant="ghost"
                 size="icon"
@@ -428,7 +428,7 @@ export default function Movimientos() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-xl font-bold md:text-2xl capitalize min-w-[160px] md:min-w-[200px] text-center">
+              <h1 className="text-xl font-bold md:text-2xl capitalize text-center">
                 {formattedMonth}
               </h1>
               <Button
@@ -439,7 +439,7 @@ export default function Movimientos() {
                 <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="hidden sm:flex gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="icon"
@@ -515,15 +515,15 @@ export default function Movimientos() {
           {/* Movements table */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <CardTitle className="flex items-center gap-2">
                   <Receipt className="h-5 w-5" />
                   Movimientos
                 </CardTitle>
                 {movimientos.length > 0 && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                     <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
-                      <SelectTrigger className="w-[150px]">
+                      <SelectTrigger className="w-full sm:w-[150px]">
                         <SelectValue>
                           {filtroCategoria === '__all__' ? (
                             'Categoría'
@@ -556,7 +556,7 @@ export default function Movimientos() {
                     </Select>
 
                     <Select value={filtroSubcategoria} onValueChange={setFiltroSubcategoria}>
-                      <SelectTrigger className="w-[150px]">
+                      <SelectTrigger className="w-full sm:w-[150px]">
                         <SelectValue>
                           {filtroSubcategoria === '__all__' ? (
                             'Subcategoría'
@@ -819,6 +819,31 @@ export default function Movimientos() {
               </div>
             </DialogContent>
           </Dialog>
+        </div>
+
+        {/* Mobile sticky bottom bar */}
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 py-3 flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-12 w-12 shrink-0"
+            onClick={() => {
+              const csv = generateMovimientosCSV(movimientos);
+              downloadFile(csv, `movimientos_${currentMonth}.csv`);
+              toast({
+                title: 'CSV exportado',
+                description: `Exportados ${movimientos.length} movimientos de ${formattedMonth}`
+              });
+            }}
+            disabled={movimientos.length === 0}
+            title="Exportar mes a CSV"
+          >
+            <Download className="h-5 w-5" />
+          </Button>
+          <Button className="flex-1 h-12 text-base" onClick={handleCreateMovimiento}>
+            <Plus className="mr-2 h-5 w-5" />
+            Nuevo Movimiento
+          </Button>
         </div>
       </MainLayout>
     </ProtectedRoute>
