@@ -428,7 +428,7 @@ export default function Movimientos() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-bold capitalize min-w-[200px] text-center">
+              <h1 className="text-xl font-bold md:text-2xl capitalize min-w-[160px] md:min-w-[200px] text-center">
                 {formattedMonth}
               </h1>
               <Button

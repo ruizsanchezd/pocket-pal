@@ -282,7 +282,7 @@ export default function Dashboard() {
     <ProtectedRoute>
       <MainLayout>
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Dashboard</h1>
 
           {/* Metrics cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

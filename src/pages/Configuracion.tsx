@@ -10,7 +10,7 @@ export default function Configuracion() {
     <ProtectedRoute>
       <MainLayout>
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold">Configuración</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Configuración</h1>
 
           <div className="grid gap-6 md:grid-cols-2">
             {/* Left: configurable sections */}

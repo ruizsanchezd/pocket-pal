@@ -22,9 +22,7 @@ import {
   Receipt,
   Settings,
   LogOut,
-  ChevronDown,
-  Menu,
-  X
+  ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,13 +33,11 @@ interface MainLayoutProps {
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/movimientos', label: 'Movimientos', icon: Receipt },
-  { href: '/configuracion', label: 'Configuración', icon: Settings }
 ];
 
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [signOutConfirm, setSignOutConfirm] = useState(false);
 
   const handleSignOut = async () => {
@@ -68,7 +64,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center">
+        <div className="container relative flex h-14 items-center">
           {/* Logo */}
           <Link to="/movimientos" className="flex items-center gap-2 mr-8">
             <svg width="24" height="24" viewBox="5 4.5 22 23" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary">
@@ -81,7 +77,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 flex-1">
+          <nav className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.href;
@@ -103,19 +99,27 @@ export function MainLayout({ children }: MainLayoutProps) {
             })}
           </nav>
 
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden mr-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </Button>
+          {/* Mobile Navigation - solo iconos, centrados */}
+          <nav className="flex md:hidden items-center gap-1 absolute left-1/2 -translate-x-1/2">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={cn(
+                    'flex items-center p-2 rounded-md transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                </Link>
+              );
+            })}
+          </nav>
 
           {/* User menu */}
           <div className="ml-auto">
@@ -164,35 +168,10 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <nav className="md:hidden border-t p-4 space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                    isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        )}
       </header>
 
       {/* Main content */}
-      <main className="container py-6">
+      <main className="container py-4 md:py-6">
         {children}
       </main>
 
