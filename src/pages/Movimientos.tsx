@@ -488,6 +488,30 @@ export default function Movimientos() {
             </Alert>
           )}
 
+          {/* Mobile totals strip - visible above the list */}
+          {filteredMovimientos.length > 0 && (
+            <div className="md:hidden grid grid-cols-3 text-center bg-muted/50 rounded-lg py-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Ingresos</p>
+                <p className="text-sm font-bold text-green-600">
+                  +{totals.ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                </p>
+              </div>
+              <div className="border-x">
+                <p className="text-xs text-muted-foreground">Gastos</p>
+                <p className="text-sm font-bold text-destructive">
+                  -{totals.gastos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Balance</p>
+                <p className={cn("text-sm font-bold", totals.balance >= 0 ? "text-green-600" : "text-destructive")}>
+                  {totals.balance >= 0 ? '+' : ''}{totals.balance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Movements table */}
           <Card>
             <CardHeader className="pb-3">
@@ -584,85 +608,134 @@ export default function Movimientos() {
                 </div>
               ) : (
                 <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[100px]">Fecha</TableHead>
-                        <TableHead className="text-right pr-8">Cantidad</TableHead>
-                        <TableHead>Concepto</TableHead>
-                        <TableHead className="hidden md:table-cell">Cuenta</TableHead>
-                        <TableHead className="hidden md:table-cell">Categoría</TableHead>
-                        <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
-                        <TableHead className="w-[80px]"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredMovimientos.map((movimiento) => (
-                      <TableRow key={movimiento.id} className="group cursor-pointer" onClick={() => handleEditMovimiento(movimiento)}>
-                        <TableCell className="font-medium">
-                          {format(new Date(movimiento.fecha), 'dd/MM')}
-                        </TableCell>
-                        <TableCell className={cn(
-                          "text-right font-medium pr-8",
-                          movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
-                        )}>
-                          {formatCurrency(Number(movimiento.cantidad))}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span>{movimiento.concepto}</span>
-                            {movimiento.es_recurrente && (
-                              <span className="text-xs text-muted-foreground">
-                                Recurrente
+                  {/* Mobile: card list */}
+                  <div className="md:hidden divide-y -mx-6">
+                    {filteredMovimientos.map((movimiento) => (
+                      <div
+                        key={movimiento.id}
+                        className="flex items-center justify-between px-6 py-3 cursor-pointer active:bg-muted/40 transition-colors"
+                        onClick={() => handleEditMovimiento(movimiento)}
+                      >
+                        <div className="flex-1 min-w-0 pr-3">
+                          <p className="font-medium text-sm truncate">{movimiento.concepto}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            {movimiento.categoria && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
+                              >
+                                {movimiento.categoria.nombre}
                               </span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <div className="flex items-center gap-1.5">
-                            <div
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: movimiento.cuenta?.color }}
-                            />
-                            <span className="text-sm">{movimiento.cuenta?.nombre}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {movimiento.categoria && (
-                            <span
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
-                            >
-                              {movimiento.categoria.nombre}
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(movimiento.fecha), 'dd MMM', { locale: es })}
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {movimiento.subcategoria && (
-                            <span
-                              className="px-2 py-1 rounded text-xs font-medium"
-                              style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
-                            >
-                              {movimiento.subcategoria.nombre}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(movimiento.id); }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {movimiento.es_recurrente && (
+                              <span className="text-xs text-muted-foreground">· Recurrente</span>
+                            )}
                           </div>
-                        </TableCell>
-                      </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <span className={cn(
+                            "font-semibold text-sm",
+                            movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
+                          )}>
+                            {formatCurrency(Number(movimiento.cantidad))}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive shrink-0"
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirm(movimiento.id); }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Desktop: table */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[100px]">Fecha</TableHead>
+                          <TableHead className="text-right pr-8">Cantidad</TableHead>
+                          <TableHead>Concepto</TableHead>
+                          <TableHead className="hidden md:table-cell">Cuenta</TableHead>
+                          <TableHead className="hidden md:table-cell">Categoría</TableHead>
+                          <TableHead className="hidden md:table-cell">Subcategoría</TableHead>
+                          <TableHead className="w-[80px]"></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredMovimientos.map((movimiento) => (
+                        <TableRow key={movimiento.id} className="group cursor-pointer" onClick={() => handleEditMovimiento(movimiento)}>
+                          <TableCell className="font-medium">
+                            {format(new Date(movimiento.fecha), 'dd/MM')}
+                          </TableCell>
+                          <TableCell className={cn(
+                            "text-right font-medium pr-8",
+                            movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
+                          )}>
+                            {formatCurrency(Number(movimiento.cantidad))}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{movimiento.concepto}</span>
+                              {movimiento.es_recurrente && (
+                                <span className="text-xs text-muted-foreground">
+                                  Recurrente
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <div className="flex items-center gap-1.5">
+                              <div
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: movimiento.cuenta?.color }}
+                              />
+                              <span className="text-sm">{movimiento.cuenta?.nombre}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {movimiento.categoria && (
+                              <span
+                                className="px-2 py-1 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
+                              >
+                                {movimiento.categoria.nombre}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {movimiento.subcategoria && (
+                              <span
+                                className="px-2 py-1 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
+                              >
+                                {movimiento.subcategoria.nombre}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(movimiento.id); }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </>
               )}
             </CardContent>
@@ -670,7 +743,7 @@ export default function Movimientos() {
 
           {/* Totals */}
           {filteredMovimientos.length > 0 && (
-            <Card>
+            <Card className="hidden md:block">
               <CardContent className="py-4">
                 <div className="flex flex-wrap justify-center gap-6 text-center">
                   <div>
@@ -701,7 +774,7 @@ export default function Movimientos() {
 
           {/* Create/Edit Modal */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="sm:max-w-md max-sm:fixed max-sm:inset-0 max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingMovimiento ? 'Editar Movimiento' : 'Nuevo Movimiento'}
