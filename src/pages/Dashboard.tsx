@@ -49,15 +49,23 @@ export default function Dashboard() {
     const variacion = hasMesAnteriorData ? patrimonioTotal - mesAnteriorPatrimonio : null;
     const tasaAhorro = currentMonthTotals.ingresos > 0
       ? (balanceMes / currentMonthTotals.ingresos) * 100
-      : 0;
+      : null;
+
+    // Ahorro 6 meses: variación de patrimonio entre el primer y último punto del gráfico
+    const firstMonth = patrimonioData.find(d => d.patrimonio !== 0);
+    const lastMonth = patrimonioData[patrimonioData.length - 1];
+    const ahorro6Meses = firstMonth && lastMonth && firstMonth !== lastMonth
+      ? lastMonth.patrimonio - firstMonth.patrimonio
+      : null;
 
     return {
       patrimonioTotal,
       balanceMes,
       variacion,
-      tasaAhorro
+      tasaAhorro,
+      ahorro6Meses
     };
-  }, [cuentas, currentMonthTotals, mesAnteriorPatrimonio, hasMesAnteriorData]);
+  }, [cuentas, currentMonthTotals, mesAnteriorPatrimonio, hasMesAnteriorData, patrimonioData]);
 
   // Fetch data
   useEffect(() => {
@@ -300,11 +308,21 @@ export default function Dashboard() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className={cn(
-                  "text-2xl font-bold",
-                  metrics.balanceMes >= 0 ? "text-green-600" : "text-destructive"
-                )}>
-                  {metrics.balanceMes >= 0 ? '+' : ''}{formatCurrency(metrics.balanceMes)}
+                <div className="flex items-baseline gap-2">
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    metrics.balanceMes >= 0 ? "text-green-600" : "text-destructive"
+                  )}>
+                    {metrics.balanceMes >= 0 ? '+' : ''}{formatCurrency(metrics.balanceMes)}
+                  </div>
+                  {metrics.tasaAhorro !== null && (
+                    <span className={cn(
+                      "text-sm font-medium",
+                      metrics.tasaAhorro >= 0 ? "text-green-600" : "text-destructive"
+                    )}>
+                      {metrics.tasaAhorro.toFixed(0)}%
+                    </span>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -339,17 +357,21 @@ export default function Dashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">
-                  Tasa de Ahorro
+                  Ahorro últimos 6 meses
                 </CardTitle>
                 <PiggyBank className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className={cn(
-                  "text-2xl font-bold",
-                  metrics.tasaAhorro >= 0 ? "text-green-600" : "text-destructive"
-                )}>
-                  {metrics.tasaAhorro.toFixed(0)}%
-                </div>
+                {metrics.ahorro6Meses === null ? (
+                  <div className="text-2xl font-bold text-muted-foreground">--</div>
+                ) : (
+                  <div className={cn(
+                    "text-2xl font-bold",
+                    metrics.ahorro6Meses >= 0 ? "text-green-600" : "text-destructive"
+                  )}>
+                    {metrics.ahorro6Meses >= 0 ? '+' : ''}{formatCurrency(metrics.ahorro6Meses)}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
