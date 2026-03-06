@@ -3,7 +3,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { gastoRecurrenteSchema, type GastoRecurrenteFormData } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import {
   Form,
@@ -61,7 +60,6 @@ export function GastoRecurrenteForm({
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || '',
       categoria_id: initialData?.categoria_id || '',
       subcategoria_id: initialData?.subcategoria_id || undefined,
-      notas: initialData?.notas || '',
       is_transfer: initialData?.is_transfer || false,
       destination_account_id: initialData?.destination_account_id || null
     }
@@ -362,25 +360,6 @@ export function GastoRecurrenteForm({
             )}
           />
         )}
-
-        <FormField
-          control={form.control}
-          name="notas"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Notas adicionales (opcional)"
-                  className="resize-none"
-                  rows={2}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>

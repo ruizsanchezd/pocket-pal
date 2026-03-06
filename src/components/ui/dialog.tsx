@@ -1,6 +1,5 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -30,28 +29,51 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DialogPortal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-      <div className="flex min-h-full items-center justify-center p-8">
-      <DialogPrimitive.Content
-        ref={ref}
-        className={cn(
-          "relative z-50 grid w-full max-w-lg sm:max-w-[520px] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-        <DialogPrimitive.Close className="absolute right-3 top-3 rounded-md p-1 opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-5 w-5" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-      </div>
-    </DialogPrimitive.Overlay>
-  </DialogPortal>
-));
+>(({ className, children, ...props }, ref) => {
+  const [isHovering, setIsHovering] = React.useState(false);
+
+  return (
+    <DialogPortal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
+        <div className="flex flex-col min-h-full items-center">
+
+          {/* Zona de cierre: cubre el espacio superior hasta la card, mismo ancho que la card */}
+          <div
+            className="flex-1 min-h-[32px] w-full max-w-lg sm:max-w-[520px] cursor-pointer flex items-end justify-center pb-2"
+            onMouseMove={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+          >
+            <span
+              className="text-sm text-white/70 select-none"
+              style={{ opacity: isHovering ? 1 : 0, transition: 'opacity 150ms ease' }}
+            >
+              ↓ ESC para cerrar
+            </span>
+          </div>
+
+          <DialogPrimitive.Content
+            ref={ref}
+            className={cn(
+              "relative z-50 grid w-full max-w-lg sm:max-w-[520px] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:rounded-lg",
+              className,
+            )}
+            style={{
+              transform: isHovering ? "translateY(8px)" : "translateY(0)",
+              transition: "transform 200ms ease-out",
+            }}
+            {...props}
+          >
+            {children}
+          </DialogPrimitive.Content>
+
+          {/* Spacer igual → card centrada. min-h-[32px] = margen mínimo inferior antes de scroll */}
+          <div className="flex-1 min-h-[32px]" aria-hidden="true" />
+
+        </div>
+      </DialogPrimitive.Overlay>
+    </DialogPortal>
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

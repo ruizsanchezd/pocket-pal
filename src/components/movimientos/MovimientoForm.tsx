@@ -4,7 +4,6 @@ import { format } from 'date-fns';
 import { movimientoSchema, type MovimientoFormData } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import {
   Form,
@@ -66,8 +65,7 @@ export function MovimientoForm({
       cantidad: initialData?.cantidad ? Number(initialData.cantidad) : undefined,
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || cuentas[0]?.id || '',
       categoria_id: initialData?.categoria_id || '',
-      subcategoria_id: initialData?.subcategoria_id || undefined,
-      notas: initialData?.notas || ''
+      subcategoria_id: initialData?.subcategoria_id || undefined
     }
   });
 
@@ -324,25 +322,6 @@ export function MovimientoForm({
             )}
           />
         )}
-
-        <FormField
-          control={form.control}
-          name="notas"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Notas adicionales (opcional)"
-                  className="resize-none"
-                  rows={2}
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>

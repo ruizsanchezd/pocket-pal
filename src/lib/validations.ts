@@ -49,11 +49,7 @@ export const movimientoSchema = z.object({
   categoria_id: z
     .string()
     .min(1, 'Selecciona una categoría'),
-  subcategoria_id: z.string().optional(),
-  notas: z
-    .string()
-    .max(500, 'Las notas no pueden exceder 500 caracteres')
-    .optional()
+  subcategoria_id: z.string().optional()
 });
 
 // Cuenta validations
@@ -119,7 +115,6 @@ export const gastoRecurrenteSchema = z.object({
   cuenta_id: z.string().min(1, 'Selecciona una cuenta'),
   categoria_id: z.string().min(1, 'Selecciona una categoría'),
   subcategoria_id: z.string().optional(),
-  notas: z.string().max(500, 'Las notas no pueden exceder 500 caracteres').optional(),
   is_transfer: z.boolean().default(false),
   destination_account_id: z.string().nullable().optional()
 }).refine((data) => {
