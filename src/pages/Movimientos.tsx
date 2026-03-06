@@ -37,7 +37,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Pencil,
   Trash2,
   Receipt,
   Loader2,
@@ -499,19 +498,35 @@ export default function Movimientos() {
                 </CardTitle>
                 {movimientos.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
+                    <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
                       <SelectTrigger className="w-[150px]">
                         <SelectValue>
-                          {filtroCategoria === '__all__'
-                            ? 'Categoría'
-                            : categoriasParent.find(c => c.id === filtroCategoria)?.nombre
-                          }
+                          {filtroCategoria === '__all__' ? (
+                            'Categoría'
+                          ) : (() => {
+                            const cat = categoriasParent.find(c => c.id === filtroCategoria);
+                            return cat ? (
+                              <span
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
+                              >
+                                {cat.nombre}
+                              </span>
+                            ) : null;
+                          })()}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__">Todas</SelectItem>
                         {categoriasParent.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.nombre}</SelectItem>
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <span
+                              className="px-2 py-0.5 rounded text-xs font-medium"
+                              style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
+                            >
+                              {cat.nombre}
+                            </span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -519,16 +534,32 @@ export default function Movimientos() {
                     <Select value={filtroSubcategoria} onValueChange={setFiltroSubcategoria}>
                       <SelectTrigger className="w-[150px]">
                         <SelectValue>
-                          {filtroSubcategoria === '__all__'
-                            ? 'Subcategoría'
-                            : todasSubcategorias.find(s => s.id === filtroSubcategoria)?.nombre
-                          }
+                          {filtroSubcategoria === '__all__' ? (
+                            'Subcategoría'
+                          ) : (() => {
+                            const sub = todasSubcategorias.find(s => s.id === filtroSubcategoria);
+                            return sub ? (
+                              <span
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                              >
+                                {sub.nombre}
+                              </span>
+                            ) : null;
+                          })()}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__">Todas</SelectItem>
                         {todasSubcategorias.map(sub => (
-                          <SelectItem key={sub.id} value={sub.id}>{sub.nombre}</SelectItem>
+                          <SelectItem key={sub.id} value={sub.id}>
+                            <span
+                              className="px-2 py-0.5 rounded text-xs font-medium"
+                              style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                            >
+                              {sub.nombre}
+                            </span>
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -567,7 +598,7 @@ export default function Movimientos() {
                     </TableHeader>
                     <TableBody>
                       {filteredMovimientos.map((movimiento) => (
-                      <TableRow key={movimiento.id} className="group">
+                      <TableRow key={movimiento.id} className="group cursor-pointer" onClick={() => handleEditMovimiento(movimiento)}>
                         <TableCell className="font-medium">
                           {format(new Date(movimiento.fecha), 'dd/MM')}
                         </TableCell>
@@ -617,20 +648,12 @@ export default function Movimientos() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => handleEditMovimiento(movimiento)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                          <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive"
-                              onClick={() => setDeleteConfirm(movimiento.id)}
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(movimiento.id); }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

@@ -11,6 +11,13 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   LayoutDashboard,
   Receipt,
   Settings,
@@ -35,6 +42,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [signOutConfirm, setSignOutConfirm] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -147,7 +155,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                <DropdownMenuItem onClick={() => setSignOutConfirm(true)} className="cursor-pointer text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar sesión
                 </DropdownMenuItem>
@@ -187,6 +195,26 @@ export function MainLayout({ children }: MainLayoutProps) {
       <main className="container py-6">
         {children}
       </main>
+
+      {/* Sign out confirmation */}
+      <Dialog open={signOutConfirm} onOpenChange={setSignOutConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>¿Cerrar sesión?</DialogTitle>
+            <DialogDescription>
+              Se cerrará tu sesión en este dispositivo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setSignOutConfirm(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleSignOut}>
+              Cerrar sesión
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

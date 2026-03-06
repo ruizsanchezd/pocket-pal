@@ -70,14 +70,27 @@ export function GastoRecurrenteForm({
   const categoriaId = form.watch('categoria_id');
   const isTransfer = form.watch('is_transfer');
   const cuentaId = form.watch('cuenta_id');
+  const cantidad = form.watch('cantidad');
 
-  // Filter categories (only gastos for recurring expenses, unless it's a transfer)
+  const tipoCategoria = isTransfer ? null : (cantidad !== undefined && cantidad > 0 ? 'ingreso' : 'gasto');
+
+  // Reset category when tipo changes (e.g. switching from negative to positive amount)
+  useMemo(() => {
+    if (!isTransfer && categoriaId) {
+      const currentCategoria = categorias.find(c => c.id === categoriaId);
+      if (currentCategoria && tipoCategoria && currentCategoria.tipo !== tipoCategoria) {
+        form.setValue('categoria_id', '');
+        form.setValue('subcategoria_id', undefined);
+      }
+    }
+  }, [tipoCategoria]);
+
   const filteredCategorias = useMemo(() => {
     if (isTransfer) {
-      return categorias.filter(c => !c.parent_id); // Show all parent categories for transfers
+      return categorias.filter(c => !c.parent_id);
     }
-    return categorias.filter(c => !c.parent_id && c.tipo === 'gasto');
-  }, [categorias, isTransfer]);
+    return categorias.filter(c => !c.parent_id && c.tipo === tipoCategoria);
+  }, [categorias, isTransfer, tipoCategoria]);
 
   // Get subcategories for selected category
   const subcategorias = useMemo(() => {
@@ -254,7 +267,8 @@ export function GastoRecurrenteForm({
                 <CreatableSelect
                   options={filteredCategorias.map((cat) => ({
                     value: cat.id,
-                    label: cat.nombre
+                    label: cat.nombre,
+                    color: cat.color
                   }))}
                   value={field.value}
                   onValueChange={(value) => {
@@ -264,14 +278,13 @@ export function GastoRecurrenteForm({
                   onCreate={async (nombre: string) => {
                     if (!user) return null;
 
-                    // Recurring expenses are always 'gasto' type
                     const { data, error } = await supabase
                       .from('categorias')
                       .insert({
                         user_id: user.id,
                         nombre,
                         parent_id: null,
-                        tipo: 'gasto',
+                        tipo: tipoCategoria ?? 'gasto',
                         color: '#6b7280', // Default gray
                         orden: 999
                       })
@@ -306,7 +319,8 @@ export function GastoRecurrenteForm({
                   <CreatableSelect
                     options={subcategorias.map((sub) => ({
                       value: sub.id,
-                      label: sub.nombre
+                      label: sub.nombre,
+                      color: sub.color
                     }))}
                     value={field.value || ''}
                     onValueChange={field.onChange}

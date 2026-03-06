@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/popover";
 
 export interface CreatableSelectProps {
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; color?: string }[];
   value: string;
   onValueChange: (value: string) => void;
   onCreate: (name: string) => Promise<string | null>;
@@ -114,7 +114,24 @@ export function CreatableSelect({
           className="w-full justify-between"
           disabled={disabled}
         >
-          {selectedOption ? selectedOption.label : placeholder}
+          {selectedOption ? (
+            selectedOption.color ? (
+              <span
+                className="px-2 py-0.5 rounded text-xs font-medium"
+                style={{
+                  backgroundColor: `${selectedOption.color}25`,
+                  color: selectedOption.color,
+                  filter: 'brightness(0.85)'
+                }}
+              >
+                {selectedOption.label}
+              </span>
+            ) : (
+              selectedOption.label
+            )
+          ) : (
+            placeholder
+          )}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -157,7 +174,20 @@ export function CreatableSelect({
                         value === option.value ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {option.label}
+                    {option.color ? (
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-medium"
+                        style={{
+                          backgroundColor: `${option.color}25`,
+                          color: option.color,
+                          filter: 'brightness(0.85)'
+                        }}
+                      >
+                        {option.label}
+                      </span>
+                    ) : (
+                      option.label
+                    )}
                   </CommandItem>
                 ))}
                 <CommandItem

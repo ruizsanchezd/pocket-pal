@@ -220,7 +220,8 @@ export function MovimientoForm({
                 <CreatableSelect
                   options={filteredCategorias.map((cat) => ({
                     value: cat.id,
-                    label: cat.nombre
+                    label: cat.nombre,
+                    color: cat.color
                   }))}
                   value={field.value}
                   onValueChange={(value) => {
@@ -280,7 +281,8 @@ export function MovimientoForm({
                   <CreatableSelect
                     options={subcategorias.map((sub) => ({
                       value: sub.id,
-                      label: sub.nombre
+                      label: sub.nombre,
+                      color: sub.color
                     }))}
                     value={field.value || ''}
                     onValueChange={field.onChange}
