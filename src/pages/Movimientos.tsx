@@ -488,30 +488,6 @@ export default function Movimientos() {
             </Alert>
           )}
 
-          {/* Mobile totals strip - visible above the list */}
-          {filteredMovimientos.length > 0 && (
-            <div className="md:hidden grid grid-cols-3 text-center bg-muted/50 rounded-lg py-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Ingresos</p>
-                <p className="text-sm font-bold text-green-600">
-                  +{totals.ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                </p>
-              </div>
-              <div className="border-x">
-                <p className="text-xs text-muted-foreground">Gastos</p>
-                <p className="text-sm font-bold text-destructive">
-                  -{totals.gastos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Balance</p>
-                <p className={cn("text-sm font-bold", totals.balance >= 0 ? "text-green-600" : "text-destructive")}>
-                  {totals.balance >= 0 ? '+' : ''}{totals.balance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Movements table */}
           <Card>
             <CardHeader className="pb-3">
@@ -733,7 +709,7 @@ export default function Movimientos() {
 
           {/* Totals */}
           {filteredMovimientos.length > 0 && (
-            <Card className="hidden md:block">
+            <Card>
               <CardContent className="py-4">
                 <div className="flex flex-wrap justify-center gap-6 text-center">
                   <div>
