@@ -11,7 +11,6 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
-import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { Loader2 } from 'lucide-react';
 import { Categoria, CategoriaTipo } from '@/types/database';
 import { useState } from 'react';
@@ -60,7 +59,7 @@ export function CategoriaForm({
       nombre: initialData?.nombre || '',
       tipo: initialData?.tipo || tipo,
       color: initialData?.color || '#6B7280',
-      icono: initialData?.icono || ''
+      icono: ''
     }
   });
 
@@ -116,23 +115,6 @@ export function CategoriaForm({
                     />
                   ))}
                 </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="icono"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Icono (emoji opcional)</FormLabel>
-              <FormControl>
-                <EmojiPicker
-                  value={field.value || ''}
-                  onChange={field.onChange}
-                />
               </FormControl>
               <FormMessage />
             </FormItem>

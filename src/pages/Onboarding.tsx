@@ -26,15 +26,15 @@ interface GastoRecurrenteInput {
   concepto: string;
   cantidad: number;
   selected: boolean;
+  cuentaId?: string;
 }
 
 const DEFAULT_GASTOS_RECURRENTES: GastoRecurrenteInput[] = [
-  { id: '1', concepto: 'Alquiler', cantidad: -900, selected: false },
-  { id: '2', concepto: 'Gimnasio', cantidad: -50, selected: false },
-  { id: '3', concepto: 'Netflix', cantidad: -12, selected: false },
-  { id: '4', concepto: 'Spotify', cantidad: -10, selected: false },
-  { id: '5', concepto: 'Internet', cantidad: -40, selected: false },
-  { id: '6', concepto: 'Móvil', cantidad: -25, selected: false }
+  { id: '1', concepto: 'Salario', cantidad: 2000, selected: false },
+  { id: '2', concepto: 'Alquiler', cantidad: -900, selected: false },
+  { id: '3', concepto: 'Gimnasio', cantidad: -50, selected: false },
+  { id: '4', concepto: 'Netflix', cantidad: -12, selected: false },
+  { id: '5', concepto: 'Spotify', cantidad: -10, selected: false },
 ];
 
 export default function Onboarding() {
@@ -90,9 +90,28 @@ export default function Onboarding() {
     }));
   };
 
+  const defaultCuentaId = cuentas.find(c => c.is_default)?.id;
+
   const toggleGastoRecurrente = (id: string) => {
-    setGastosRecurrentes(gastosRecurrentes.map(g => 
-      g.id === id ? { ...g, selected: !g.selected } : g
+    setGastosRecurrentes(gastosRecurrentes.map(g =>
+      g.id === id
+        ? { ...g, selected: !g.selected, cuentaId: g.cuentaId ?? defaultCuentaId }
+        : g
+    ));
+  };
+
+  const updateGastoCantidad = (id: string, value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed)) {
+      setGastosRecurrentes(gastosRecurrentes.map(g =>
+        g.id === id ? { ...g, cantidad: parsed } : g
+      ));
+    }
+  };
+
+  const updateGastoCuenta = (id: string, cuentaId: string) => {
+    setGastosRecurrentes(gastosRecurrentes.map(g =>
+      g.id === id ? { ...g, cuentaId } : g
     ));
   };
 
@@ -103,8 +122,9 @@ export default function Onboarding() {
         {
           id: crypto.randomUUID(),
           concepto: customGasto.concepto,
-          cantidad: -Math.abs(parseFloat(customGasto.cantidad)),
-          selected: true
+          cantidad: parseFloat(customGasto.cantidad),
+          selected: true,
+          cuentaId: defaultCuentaId
         }
       ]);
       setCustomGasto({ concepto: '', cantidad: '' });
@@ -173,8 +193,9 @@ export default function Onboarding() {
 
       if (catError) throw catError;
 
-      // Find the "Otros gastos" category for recurring expenses
+      // Find categories for recurring movements
       const otrosGastosCategory = createdCategories?.find(c => c.nombre === 'Otros gastos');
+      const otrosIngresosCategory = createdCategories?.find(c => c.nombre === 'Otros ingresos');
 
       // Create accounts
       const validCuentas = cuentas.filter(c => c.nombre.trim() !== '');
@@ -211,21 +232,27 @@ export default function Onboarding() {
       // Get the created default account
       const createdDefaultCuenta = createdCuentas?.find(c => c.nombre === defaultCuenta?.nombre);
 
-      // Create selected recurring expenses
-      if (otrosGastosCategory && createdDefaultCuenta) {
-        const selectedGastos = gastosRecurrentes.filter(g => g.selected);
-        if (selectedGastos.length > 0) {
-          await supabase.from('gastos_recurrentes').insert(
-            selectedGastos.map(g => ({
+      // Create selected recurring movements
+      const selectedGastos = gastosRecurrentes.filter(g => g.selected);
+      if (selectedGastos.length > 0 && createdDefaultCuenta) {
+        await supabase.from('gastos_recurrentes').insert(
+          selectedGastos.map(g => {
+            const cuentaInput = validCuentas.find(c => c.id === g.cuentaId);
+            const createdCuenta = cuentaInput
+              ? createdCuentas?.find(c => c.nombre === cuentaInput.nombre)
+              : undefined;
+            return {
               user_id: user.id,
               concepto: g.concepto,
               cantidad: g.cantidad,
               dia_del_mes: 1,
-              cuenta_id: createdDefaultCuenta.id,
-              categoria_id: otrosGastosCategory.id
-            }))
-          );
-        }
+              cuenta_id: createdCuenta?.id ?? createdDefaultCuenta.id,
+              categoria_id: g.cantidad > 0
+                ? (otrosIngresosCategory?.id ?? otrosGastosCategory?.id)
+                : otrosGastosCategory?.id
+            };
+          })
+        );
       }
 
       // Update profile
@@ -436,37 +463,72 @@ export default function Onboarding() {
           </Card>
         )}
 
-        {/* Step 3: Recurring expenses */}
+        {/* Step 3: Recurring movements */}
         {step === 3 && (
           <Card>
             <CardHeader className="text-center">
-              <CardTitle>Gastos recurrentes</CardTitle>
+              <CardTitle>Movimientos recurrentes</CardTitle>
               <CardDescription>
-                Selecciona los gastos que se repiten cada mes (opcional)
+                Selecciona los ingresos y gastos que se repiten cada mes (opcional)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {gastosRecurrentes.map((gasto) => (
-                  <div
-                    key={gasto.id}
-                    className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
-                      gasto.selected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => toggleGastoRecurrente(gasto.id)}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox checked={gasto.selected} />
-                      <span>{gasto.concepto}</span>
-                    </div>
-                    <span className="text-destructive font-medium">
-                      {gasto.cantidad}€
-                    </span>
+              {(() => {
+                const validCuentasStep3 = cuentas.filter(c => c.nombre.trim() !== '');
+                const multiCuenta = validCuentasStep3.length > 1;
+                return (
+                  <div className="flex flex-col gap-3">
+                    {gastosRecurrentes.map((gasto) => (
+                      <div
+                        key={gasto.id}
+                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-colors ${
+                          gasto.selected ? 'border-primary bg-primary/5' : 'hover:bg-muted/50'
+                        }`}
+                        onClick={() => toggleGastoRecurrente(gasto.id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox checked={gasto.selected} />
+                          <span>{gasto.concepto}</span>
+                        </div>
+                        {gasto.selected ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            {multiCuenta && (
+                              <Select
+                                value={gasto.cuentaId ?? defaultCuentaId}
+                                onValueChange={(v) => updateGastoCuenta(gasto.id, v)}
+                              >
+                                <SelectTrigger className="h-7 text-xs w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {validCuentasStep3.map(c => (
+                                    <SelectItem key={c.id} value={c.id} className="text-xs">
+                                      {c.nombre}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={gasto.cantidad}
+                              onChange={(e) => updateGastoCantidad(gasto.id, e.target.value)}
+                              className={`w-24 h-7 text-right px-2 font-medium ${gasto.cantidad >= 0 ? 'text-green-600' : 'text-destructive'}`}
+                            />
+                          </div>
+                        ) : (
+                          <span className={`h-7 inline-flex items-center font-medium ${gasto.cantidad >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                            {gasto.cantidad >= 0 ? '+' : ''}{gasto.cantidad}€
+                          </span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
 
-              {/* Custom expense */}
+              {/* Custom movement */}
               <div className="p-4 border rounded-lg space-y-4">
                 <Label>Añadir personalizado</Label>
                 <div className="flex gap-2">
@@ -477,7 +539,7 @@ export default function Onboarding() {
                   />
                   <Input
                     type="number"
-                    placeholder="Cantidad"
+                    placeholder="-50 o 2000"
                     className="w-32"
                     value={customGasto.cantidad}
                     onChange={(e) => setCustomGasto({ ...customGasto, cantidad: e.target.value })}

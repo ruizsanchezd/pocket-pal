@@ -147,7 +147,7 @@ export default function ConfigRecurrentes() {
             : g
         ));
 
-        toast({ title: 'Gasto recurrente actualizado' });
+        toast({ title: 'Movimiento recurrente actualizado' });
       } else {
         // Create
         const { data: newGasto, error } = await supabase
@@ -179,19 +179,19 @@ export default function ConfigRecurrentes() {
         };
 
         setGastos([...gastos, gastoConRelaciones]);
-        toast({ title: 'Gasto recurrente creado' });
+        toast({ title: 'Movimiento recurrente creado' });
       }
 
       setModalOpen(false);
       setEditingGasto(null);
     } catch (error) {
       if (import.meta.env.DEV) {
-        console.error('Error saving gasto recurrente:', error);
+        console.error('Error saving movimiento recurrente:', error);
       }
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo guardar el gasto recurrente'
+        description: 'No se pudo guardar el movimiento recurrente'
       });
     }
   };
@@ -227,12 +227,12 @@ export default function ConfigRecurrentes() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo eliminar el gasto recurrente'
+        description: 'No se pudo eliminar el movimiento recurrente'
       });
     } else {
       haptic.trigger('success');
       setGastos(gastos.filter(g => g.id !== id));
-      toast({ title: 'Gasto recurrente eliminado' });
+      toast({ title: 'Movimiento recurrente eliminado' });
     }
 
     setDeleteConfirm(null);
@@ -257,14 +257,14 @@ export default function ConfigRecurrentes() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold">Gastos Recurrentes</h1>
+            <h1 className="text-2xl font-bold">Movimientos Recurrentes</h1>
           </div>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Plantillas de Gastos
+                Movimientos Recurrentes
               </CardTitle>
               <Button onClick={handleCreate}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -279,9 +279,9 @@ export default function ConfigRecurrentes() {
               ) : gastos.length === 0 ? (
                 <div className="text-center py-8">
                   <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg font-medium">No hay gastos recurrentes</p>
+                  <p className="text-lg font-medium">No hay movimientos recurrentes</p>
                   <p className="text-muted-foreground mb-4">
-                    Configura tus gastos que se repiten cada mes
+                    Configura tus movimientos que se repiten cada mes
                   </p>
                   <Button onClick={handleCreate}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -363,11 +363,11 @@ export default function ConfigRecurrentes() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editingGasto ? 'Editar Gasto Recurrente' : 'Nuevo Gasto Recurrente'}
+                  {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
                 </DialogTitle>
                 <DialogDescription>
                   {editingGasto 
-                    ? 'Modifica los datos del gasto recurrente' 
+                    ? 'Modifica los datos del movimiento recurrente' 
                     : 'Añade un nuevo gasto que se repite cada mes'}
                 </DialogDescription>
               </DialogHeader>
@@ -387,7 +387,7 @@ export default function ConfigRecurrentes() {
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
             <DialogContent className="max-w-sm">
               <DialogHeader>
-                <DialogTitle>¿Eliminar gasto recurrente?</DialogTitle>
+                <DialogTitle>¿Eliminar movimiento recurrente?</DialogTitle>
                 <DialogDescription>
                   Esta acción no se puede deshacer.
                 </DialogDescription>
