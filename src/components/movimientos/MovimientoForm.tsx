@@ -162,6 +162,7 @@ export function MovimientoForm({
               <FormControl>
                 <Input
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   placeholder="-45.50"
                   {...field}

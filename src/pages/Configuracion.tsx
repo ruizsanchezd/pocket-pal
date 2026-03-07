@@ -19,7 +19,7 @@ export default function Configuracion() {
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Wallet className="h-5 w-5" />
+                      <div className="p-1.5 rounded-md bg-muted"><Wallet className="h-4 w-4 text-muted-foreground" /></div>
                       Cuentas
                     </CardTitle>
                     <CardDescription>
@@ -33,7 +33,7 @@ export default function Configuracion() {
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Tags className="h-5 w-5" />
+                      <div className="p-1.5 rounded-md bg-muted"><Tags className="h-4 w-4 text-muted-foreground" /></div>
                       Categorías
                     </CardTitle>
                     <CardDescription>
@@ -47,7 +47,7 @@ export default function Configuracion() {
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
+                      <div className="p-1.5 rounded-md bg-muted"><CreditCard className="h-4 w-4 text-muted-foreground" /></div>
                       Gastos Recurrentes
                     </CardTitle>
                     <CardDescription>
@@ -61,7 +61,7 @@ export default function Configuracion() {
                 <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                      <Download className="h-5 w-5" />
+                      <div className="p-1.5 rounded-md bg-muted"><Download className="h-4 w-4 text-muted-foreground" /></div>
                       Exportar Datos
                     </CardTitle>
                     <CardDescription>

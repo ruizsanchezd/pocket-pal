@@ -188,7 +188,7 @@ export function CreatableSelect({
 
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={handleOpenChange}>
+      <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
         <DrawerContent>
           <DrawerHeader>

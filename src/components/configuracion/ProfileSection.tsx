@@ -168,7 +168,7 @@ export function ProfileSection() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
+          <div className="p-1.5 rounded-md bg-muted"><User className="h-4 w-4 text-muted-foreground" /></div>
           Perfil
         </CardTitle>
         <CardDescription>

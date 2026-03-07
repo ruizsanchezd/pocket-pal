@@ -315,7 +315,7 @@ export default function ConfigCategorias() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Tags className="h-5 w-5" />
+                <div className="p-1.5 rounded-md bg-muted"><Tags className="h-4 w-4 text-muted-foreground" /></div>
                 Categorías
               </CardTitle>
               <Button onClick={() => handleCreate()}>

@@ -381,7 +381,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5" />
+                  <div className="p-1.5 rounded-md bg-muted"><Wallet className="h-4 w-4 text-muted-foreground" /></div>
                   Mis Cuentas
                 </CardTitle>
               </CardHeader>
@@ -503,7 +503,7 @@ export default function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5" />
+                  <div className="p-1.5 rounded-md bg-muted"><TrendingUp className="h-4 w-4 text-muted-foreground" /></div>
                   Evolución Patrimonio
                 </CardTitle>
                 <CardDescription>Últimos 6 meses</CardDescription>
