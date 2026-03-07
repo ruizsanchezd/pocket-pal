@@ -41,11 +41,9 @@ import {
   Receipt,
   Loader2,
   AlertCircle,
-  Download,
 } from 'lucide-react';
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { downloadFile, generateMovimientosCSV } from '@/lib/export';
 
 export default function Movimientos() {
   const { user, profile } = useAuth();
@@ -417,7 +415,7 @@ export default function Movimientos() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6 pb-24 sm:pb-0">
+        <div className="space-y-3 sm:space-y-6 pb-24 sm:pb-0">
           {/* Header */}
           <div className="flex sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
@@ -428,7 +426,7 @@ export default function Movimientos() {
               >
                 <ChevronLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-xl font-bold md:text-2xl capitalize text-center">
+              <h1 className="text-base font-semibold md:text-lg capitalize text-center">
                 {formattedMonth}
               </h1>
               <Button
@@ -440,22 +438,6 @@ export default function Movimientos() {
               </Button>
             </div>
             <div className="hidden sm:flex gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => {
-                  const csv = generateMovimientosCSV(movimientos);
-                  downloadFile(csv, `movimientos_${currentMonth}.csv`);
-                  toast({
-                    title: 'CSV exportado',
-                    description: `Exportados ${movimientos.length} movimientos de ${formattedMonth}`
-                  });
-                }}
-                disabled={movimientos.length === 0}
-                title="Exportar mes a CSV"
-              >
-                <Download className="h-4 w-4" />
-              </Button>
               <Button onClick={handleCreateMovimiento}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nuevo Movimiento
@@ -491,13 +473,15 @@ export default function Movimientos() {
           {/* Movements table */}
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-5">
                 <CardTitle className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
+                  <div className="p-1.5 rounded-md bg-muted"><Receipt className="h-4 w-4 text-muted-foreground" /></div>
                   Movimientos
                 </CardTitle>
+
+                {/* Filtros */}
                 {movimientos.length > 0 && (
-                  <div className="flex flex-row gap-2 w-full sm:w-auto">
+                  <div className="flex flex-row gap-2 w-full sm:w-auto items-center">
                     <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
                       <SelectTrigger className="flex-1 sm:w-[150px]">
                         <SelectValue>
@@ -563,6 +547,7 @@ export default function Movimientos() {
                         ))}
                       </SelectContent>
                     </Select>
+
                   </div>
                 )}
               </div>
@@ -594,7 +579,7 @@ export default function Movimientos() {
                       >
                         <div className="flex-1 min-w-0 pr-3">
                           <p className="font-medium text-sm truncate">{movimiento.concepto}</p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                             {movimiento.categoria && (
                               <span
                                 className="px-1.5 py-0.5 rounded text-xs font-medium"
@@ -603,9 +588,14 @@ export default function Movimientos() {
                                 {movimiento.categoria.nombre}
                               </span>
                             )}
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(movimiento.fecha), 'dd MMM', { locale: es })}
-                            </span>
+                            {movimiento.subcategoria && (
+                              <span
+                                className="px-1.5 py-0.5 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
+                              >
+                                {movimiento.subcategoria.nombre}
+                              </span>
+                            )}
                             {movimiento.es_recurrente && (
                               <span className="text-xs text-muted-foreground">· Recurrente</span>
                             )}
@@ -709,33 +699,31 @@ export default function Movimientos() {
 
           {/* Totals */}
           {filteredMovimientos.length > 0 && (
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex flex-wrap justify-center gap-6 text-center">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ingresos</p>
-                    <p className="text-xl font-bold text-green-600">
-                      +{totals.ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                    </p>
-                  </div>
-                  <div className="border-l pl-6">
-                    <p className="text-sm text-muted-foreground">Gastos</p>
-                    <p className="text-xl font-bold text-destructive">
-                      -{totals.gastos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                    </p>
-                  </div>
-                  <div className="border-l pl-6">
-                    <p className="text-sm text-muted-foreground">Balance</p>
-                    <p className={cn(
-                      "text-xl font-bold",
-                      totals.balance >= 0 ? "text-green-600" : "text-destructive"
-                    )}>
-                      {totals.balance >= 0 ? '+' : ''}{totals.balance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
-                    </p>
-                  </div>
+            <div className="rounded-lg bg-muted/50 px-4 py-3">
+              <div className="flex flex-wrap justify-center gap-6 text-center">
+                <div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Ingresos</p>
+                  <p className="text-sm md:text-base font-semibold text-green-600">
+                    +{totals.ingresos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="border-l pl-6">
+                  <p className="text-xs md:text-sm text-muted-foreground">Gastos</p>
+                  <p className="text-sm md:text-base font-semibold text-destructive">
+                    -{totals.gastos.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                  </p>
+                </div>
+                <div className="border-l pl-6">
+                  <p className="text-xs md:text-sm text-muted-foreground">Balance</p>
+                  <p className={cn(
+                    "text-sm md:text-base font-semibold",
+                    totals.balance >= 0 ? "text-green-600" : "text-destructive"
+                  )}>
+                    {totals.balance >= 0 ? '+' : ''}{totals.balance.toLocaleString('es-ES', { minimumFractionDigits: 2 })}€
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Create/Edit Modal */}
@@ -788,25 +776,8 @@ export default function Movimientos() {
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-12 w-12 shrink-0"
-            onClick={() => {
-              const csv = generateMovimientosCSV(movimientos);
-              downloadFile(csv, `movimientos_${currentMonth}.csv`);
-              toast({
-                title: 'CSV exportado',
-                description: `Exportados ${movimientos.length} movimientos de ${formattedMonth}`
-              });
-            }}
-            disabled={movimientos.length === 0}
-            title="Exportar mes a CSV"
-          >
-            <Download className="h-5 w-5" />
-          </Button>
-          <Button className="flex-1 h-12 text-base" onClick={handleCreateMovimiento}>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 py-3">
+          <Button className="w-full h-12 text-base" onClick={handleCreateMovimiento}>
             <Plus className="mr-2 h-5 w-5" />
             Nuevo Movimiento
           </Button>
