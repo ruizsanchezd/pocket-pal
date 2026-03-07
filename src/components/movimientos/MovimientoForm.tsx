@@ -56,6 +56,10 @@ export function MovimientoForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const haptic = useWebHaptics();
+  const [sign, setSign] = useState<1 | -1>(() => {
+    if (initialData?.cantidad !== undefined) return Number(initialData.cantidad) >= 0 ? 1 : -1;
+    return -1;
+  });
 
   const form = useForm<MovimientoFormData>({
     resolver: zodResolver(movimientoSchema),
@@ -71,6 +75,17 @@ export function MovimientoForm({
 
   const cantidad = form.watch('cantidad');
   const categoriaId = form.watch('categoria_id');
+
+  const handleSignToggle = () => {
+    const newSign: 1 | -1 = sign === 1 ? -1 : 1;
+    setSign(newSign);
+    const current = form.getValues('cantidad');
+    if (current !== undefined) {
+      form.setValue('cantidad', Math.abs(Number(current)) * newSign, { shouldValidate: true });
+    }
+    form.setValue('categoria_id', '');
+    form.setValue('subcategoria_id', undefined);
+  };
 
   // Filter categories by type based on amount
   const filteredCategorias = useMemo(() => {
@@ -158,20 +173,33 @@ export function MovimientoForm({
           name="cantidad"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Cantidad * (negativo = gasto)</FormLabel>
+              <FormLabel>Cantidad *</FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  step="0.01"
-                  placeholder="-45.50"
-                  {...field}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value ? parseFloat(value) : undefined);
-                  }}
-                  value={field.value ?? ''}
-                />
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className={cn(
+                      "shrink-0 font-bold text-base",
+                      sign === 1 ? "text-green-600" : "text-destructive"
+                    )}
+                    onClick={handleSignToggle}
+                  >
+                    {sign === 1 ? '+' : '−'}
+                  </Button>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={field.value !== undefined ? Math.abs(Number(field.value)) || '' : ''}
+                    onChange={(e) => {
+                      const absValue = e.target.value ? parseFloat(e.target.value) : undefined;
+                      field.onChange(absValue !== undefined ? Math.abs(absValue) * sign : undefined);
+                    }}
+                  />
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>

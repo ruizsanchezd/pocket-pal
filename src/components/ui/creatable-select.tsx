@@ -16,14 +16,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export interface CreatableSelectProps {
   options: { value: string; label: string; color?: string }[];
@@ -48,7 +40,6 @@ export function CreatableSelect({
   allowNone = false,
   emptyText = "No se encontraron resultados",
 }: CreatableSelectProps) {
-  const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [mode, setMode] = React.useState<"select" | "create">("select");
   const [createValue, setCreateValue] = React.useState("");
@@ -186,70 +177,6 @@ export function CreatableSelect({
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
-        <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{placeholder}</DrawerTitle>
-          </DrawerHeader>
-          {mode === "select" ? (
-            <div className="overflow-y-auto px-4 pb-8">
-              {allowNone && (
-                <button
-                  className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
-                  onClick={() => {
-                    onValueChange("");
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("h-4 w-4 shrink-0", value === "" ? "opacity-100" : "opacity-0")} />
-                  Ninguna
-                </button>
-              )}
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
-                  onClick={() => {
-                    onValueChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
-                  {option.color ? (
-                    <span
-                      className="px-2 py-0.5 rounded text-sm font-medium"
-                      style={{
-                        backgroundColor: `${option.color}25`,
-                        color: option.color,
-                        filter: "brightness(0.85)",
-                      }}
-                    >
-                      {option.label}
-                    </span>
-                  ) : (
-                    <span className="text-base">{option.label}</span>
-                  )}
-                </button>
-              ))}
-              <button
-                className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 text-primary active:bg-accent"
-                onClick={() => setMode("create")}
-              >
-                <Plus className="h-4 w-4 shrink-0" />
-                <span className="text-base">{createLabel}</span>
-              </button>
-            </div>
-          ) : (
-            createForm
-          )}
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
@@ -267,6 +194,7 @@ export function CreatableSelect({
                 {allowNone && (
                   <CommandItem
                     value=""
+                    className="py-2.5 sm:py-1.5"
                     onSelect={() => {
                       onValueChange("");
                       setOpen(false);
@@ -285,6 +213,7 @@ export function CreatableSelect({
                   <CommandItem
                     key={option.value}
                     value={option.label}
+                    className="py-2.5 sm:py-1.5"
                     onSelect={() => {
                       onValueChange(option.value);
                       setOpen(false);
@@ -314,7 +243,7 @@ export function CreatableSelect({
                 ))}
                 <CommandItem
                   onSelect={() => setMode("create")}
-                  className="text-primary"
+                  className="py-2.5 sm:py-1.5 text-primary"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {createLabel}
