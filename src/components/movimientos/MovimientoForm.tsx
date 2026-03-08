@@ -28,11 +28,12 @@ import {
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, MovimientoConRelaciones } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MovimientoFormProps {
   cuentas: Cuenta[];
@@ -56,6 +57,8 @@ export function MovimientoForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const haptic = useWebHaptics();
+  const isMobile = useIsMobile();
+  const prevSignRef = useRef<1 | -1>(1);
   const [sign, setSign] = useState<1 | -1>(() => {
     if (initialData?.cantidad !== undefined) return Number(initialData.cantidad) >= 0 ? 1 : -1;
     return -1;
@@ -175,31 +178,54 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Cantidad *</FormLabel>
               <FormControl>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className={cn(
-                      "shrink-0 font-bold text-base",
-                      sign === 1 ? "text-green-600" : "text-destructive"
-                    )}
-                    onClick={handleSignToggle}
-                  >
-                    {sign === 1 ? '+' : '−'}
-                  </Button>
+                {isMobile ? (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className={cn(
+                        "shrink-0 font-bold text-base",
+                        sign === 1 ? "text-green-600" : "text-destructive"
+                      )}
+                      onClick={handleSignToggle}
+                    >
+                      {sign === 1 ? '+' : '−'}
+                    </Button>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={field.value !== undefined ? Math.abs(Number(field.value)) || '' : ''}
+                      onChange={(e) => {
+                        const absValue = e.target.value ? parseFloat(e.target.value) : undefined;
+                        field.onChange(absValue !== undefined ? Math.abs(absValue) * sign : undefined);
+                      }}
+                    />
+                  </div>
+                ) : (
                   <Input
                     type="number"
-                    inputMode="decimal"
                     step="0.01"
-                    placeholder="0.00"
-                    value={field.value !== undefined ? Math.abs(Number(field.value)) || '' : ''}
+                    placeholder="Ej: -20.50 o 1500"
+                    value={field.value !== undefined ? field.value : ''}
                     onChange={(e) => {
-                      const absValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                      field.onChange(absValue !== undefined ? Math.abs(absValue) * sign : undefined);
+                      const newValue = e.target.value ? parseFloat(e.target.value) : undefined;
+                      const newSign: 1 | -1 = newValue !== undefined && newValue < 0 ? -1 : 1;
+                      if (newSign !== prevSignRef.current) {
+                        form.setValue('categoria_id', '');
+                        form.setValue('subcategoria_id', undefined);
+                        prevSignRef.current = newSign;
+                      }
+                      field.onChange(newValue);
                     }}
+                    className={cn(
+                      field.value !== undefined && Number(field.value) > 0 && "text-green-600",
+                      field.value !== undefined && Number(field.value) < 0 && "text-destructive"
+                    )}
                   />
-                </div>
+                )}
               </FormControl>
               <FormMessage />
             </FormItem>
