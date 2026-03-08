@@ -114,7 +114,7 @@ export function MovimientoForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 min-w-0">
         <FormField
           control={form.control}
           name="fecha"
