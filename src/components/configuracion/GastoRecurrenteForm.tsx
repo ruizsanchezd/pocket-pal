@@ -84,11 +84,8 @@ export function GastoRecurrenteForm({
   }, [tipoCategoria]);
 
   const filteredCategorias = useMemo(() => {
-    if (isTransfer) {
-      return categorias.filter(c => !c.parent_id);
-    }
-    return categorias.filter(c => !c.parent_id && c.tipo === tipoCategoria);
-  }, [categorias, isTransfer, tipoCategoria]);
+    return categorias.filter(c => !c.parent_id);
+  }, [categorias]);
 
   // Get subcategories for selected category
   const subcategorias = useMemo(() => {

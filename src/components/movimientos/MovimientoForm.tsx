@@ -90,14 +90,9 @@ export function MovimientoForm({
     form.setValue('subcategoria_id', undefined);
   };
 
-  // Filter categories by type based on amount
   const filteredCategorias = useMemo(() => {
-    if (cantidad === undefined || cantidad === 0) {
-      return categorias.filter(c => !c.parent_id);
-    }
-    const tipo = cantidad > 0 ? 'ingreso' : 'gasto';
-    return categorias.filter(c => !c.parent_id && (c.tipo === tipo || c.tipo === 'inversion'));
-  }, [categorias, cantidad]);
+    return categorias.filter(c => !c.parent_id);
+  }, [categorias]);
 
   // Get subcategories for selected category
   const subcategorias = useMemo(() => {
