@@ -1,8 +1,7 @@
 import * as React from "react";
-import { Check, ChevronsUpDown, Plus, X } from "lucide-react";
+import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
@@ -50,10 +49,11 @@ export function CreatableSelect({
 }: CreatableSelectProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
-  const [mode, setMode] = React.useState<"select" | "create">("select");
+  const [isInlineCreating, setIsInlineCreating] = React.useState(false);
   const [createValue, setCreateValue] = React.useState("");
-  const [isCreating, setIsCreating] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState("");
+  const inlineInputRef = React.useRef<HTMLInputElement>(null);
 
   const selectedOption = options.find((option) => option.value === value);
 
@@ -61,7 +61,7 @@ export function CreatableSelect({
     const trimmedValue = createValue.trim();
 
     if (trimmedValue.length < 2) {
-      setError("El nombre debe tener al menos 2 caracteres");
+      setError("Mínimo 2 caracteres");
       return;
     }
 
@@ -70,11 +70,11 @@ export function CreatableSelect({
     );
 
     if (isDuplicate) {
-      setError("Ya existe una opción con este nombre");
+      setError("Ya existe con ese nombre");
       return;
     }
 
-    setIsCreating(true);
+    setIsSaving(true);
     setError("");
 
     try {
@@ -83,7 +83,7 @@ export function CreatableSelect({
       if (newId) {
         onValueChange(newId);
         setOpen(false);
-        setMode("select");
+        setIsInlineCreating(false);
         setCreateValue("");
       } else {
         setError("Error al crear. Intenta de nuevo.");
@@ -91,12 +91,12 @@ export function CreatableSelect({
     } catch {
       setError("Error al crear. Intenta de nuevo.");
     } finally {
-      setIsCreating(false);
+      setIsSaving(false);
     }
   };
 
-  const handleCancel = () => {
-    setMode("select");
+  const handleCancelInline = () => {
+    setIsInlineCreating(false);
     setCreateValue("");
     setError("");
   };
@@ -104,10 +104,18 @@ export function CreatableSelect({
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      setMode("select");
+      setIsInlineCreating(false);
       setCreateValue("");
       setError("");
     }
+  };
+
+  const handleStartInlineCreate = () => {
+    setIsInlineCreating(true);
+    setCreateValue("");
+    setError("");
+    // Focus after render
+    setTimeout(() => inlineInputRef.current?.focus(), 0);
   };
 
   const triggerButton = (
@@ -140,49 +148,39 @@ export function CreatableSelect({
     </Button>
   );
 
-  const createForm = (
-    <div className="p-4 space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Nombre</label>
-        <Input
+  // Inline create row — used in both desktop and mobile
+  const inlineCreateRow = (
+    <div className="border-t">
+      <div className="flex items-center gap-2 px-2 py-1.5">
+        <Plus className="h-4 w-4 text-primary shrink-0" />
+        <input
+          ref={inlineInputRef}
           value={createValue}
           onChange={(e) => {
             setCreateValue(e.target.value);
             setError("");
           }}
-          placeholder="Introduce el nombre..."
-          autoFocus
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
               handleCreate();
             } else if (e.key === "Escape") {
-              handleCancel();
+              e.preventDefault();
+              handleCancelInline();
             }
           }}
-          disabled={isCreating}
+          placeholder="Nombre... (Enter para guardar)"
+          className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+          disabled={isSaving}
+          autoComplete="off"
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {isSaving && (
+          <span className="text-xs text-muted-foreground shrink-0">Guardando…</span>
+        )}
       </div>
-      <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCancel}
-          disabled={isCreating}
-        >
-          <X className="mr-1 h-3 w-3" />
-          Cancelar
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleCreate}
-          disabled={isCreating || !createValue.trim()}
-        >
-          <Plus className="mr-1 h-3 w-3" />
-          {isCreating ? "Creando..." : "Crear"}
-        </Button>
-      </div>
+      {error && (
+        <p className="px-2 pb-1.5 text-xs text-destructive">{error}</p>
+      )}
     </div>
   );
 
@@ -194,57 +192,88 @@ export function CreatableSelect({
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
-          {mode === "select" ? (
-            <div className="overflow-y-auto px-4 pb-8">
-              {allowNone && (
-                <button
-                  className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
-                  onClick={() => {
-                    onValueChange("");
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("h-4 w-4 shrink-0", value === "" ? "opacity-100" : "opacity-0")} />
-                  Ninguna
-                </button>
-              )}
-              {options.map((option) => (
-                <button
-                  key={option.value}
-                  className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
-                  onClick={() => {
-                    onValueChange(option.value);
-                    setOpen(false);
-                  }}
-                >
-                  <Check className={cn("h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
-                  {option.color ? (
-                    <span
-                      className="px-2 py-0.5 rounded text-sm font-medium"
-                      style={{
-                        backgroundColor: `${option.color}25`,
-                        color: option.color,
-                        filter: "brightness(0.85)",
-                      }}
-                    >
-                      {option.label}
-                    </span>
-                  ) : (
-                    <span className="text-base">{option.label}</span>
-                  )}
-                </button>
-              ))}
+          <div className="overflow-y-auto px-4 pb-8">
+            {allowNone && (
+              <button
+                className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
+                onClick={() => {
+                  onValueChange("");
+                  setOpen(false);
+                }}
+              >
+                <Check className={cn("h-4 w-4 shrink-0", value === "" ? "opacity-100" : "opacity-0")} />
+                Ninguna
+              </button>
+            )}
+            {options.map((option) => (
+              <button
+                key={option.value}
+                className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                onClick={() => {
+                  onValueChange(option.value);
+                  setOpen(false);
+                }}
+              >
+                <Check className={cn("h-4 w-4 shrink-0", value === option.value ? "opacity-100" : "opacity-0")} />
+                {option.color ? (
+                  <span
+                    className="px-2 py-0.5 rounded text-sm font-medium"
+                    style={{
+                      backgroundColor: `${option.color}25`,
+                      color: option.color,
+                      filter: "brightness(0.85)",
+                    }}
+                  >
+                    {option.label}
+                  </span>
+                ) : (
+                  <span className="text-base">{option.label}</span>
+                )}
+              </button>
+            ))}
+            {!isInlineCreating ? (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 text-primary active:bg-accent"
-                onClick={() => setMode("create")}
+                onClick={handleStartInlineCreate}
               >
                 <Plus className="h-4 w-4 shrink-0" />
                 <span className="text-base">{createLabel}</span>
               </button>
-            </div>
-          ) : (
-            createForm
-          )}
+            ) : (
+              <div className="py-2">
+                <div className="flex items-center gap-2 px-2 py-2 rounded-lg border">
+                  <Plus className="h-4 w-4 text-primary shrink-0" />
+                  <input
+                    value={createValue}
+                    onChange={(e) => {
+                      setCreateValue(e.target.value);
+                      setError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreate();
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        handleCancelInline();
+                      }
+                    }}
+                    placeholder="Nombre... (Enter para guardar)"
+                    className="flex-1 bg-transparent outline-none text-base placeholder:text-muted-foreground"
+                    disabled={isSaving}
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  {isSaving && (
+                    <span className="text-xs text-muted-foreground shrink-0">Guardando…</span>
+                  )}
+                </div>
+                {error && (
+                  <p className="px-2 pt-1 text-xs text-destructive">{error}</p>
+                )}
+              </div>
+            )}
+          </div>
         </DrawerContent>
       </Drawer>
     );
@@ -256,77 +285,81 @@ export function CreatableSelect({
       <PopoverContent
         className="p-0"
         align="start"
-        style={{ width: "var(--radix-popover-trigger-width)" }}
+        side="top"
+        avoidCollisions={false}
+        style={{
+          width: "var(--radix-popover-trigger-width)",
+          maxHeight: "calc(var(--radix-popover-content-available-height) - 32px)",
+        }}
       >
-        {mode === "select" ? (
-          <Command>
-            <CommandInput placeholder="Buscar..." />
-            <CommandList>
-              <CommandEmpty>{emptyText}</CommandEmpty>
-              <CommandGroup>
-                {allowNone && (
-                  <CommandItem
-                    value=""
-                    className="py-2.5 sm:py-1.5"
-                    onSelect={() => {
-                      onValueChange("");
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === "" ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    <span className="text-muted-foreground italic">Ninguna</span>
-                  </CommandItem>
-                )}
-                {options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.label}
-                    className="py-2.5 sm:py-1.5"
-                    onSelect={() => {
-                      onValueChange(option.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option.color ? (
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                          backgroundColor: `${option.color}25`,
-                          color: option.color,
-                          filter: "brightness(0.85)",
-                        }}
-                      >
-                        {option.label}
-                      </span>
-                    ) : (
-                      option.label
-                    )}
-                  </CommandItem>
-                ))}
+        <Command>
+          <CommandInput placeholder="Buscar..." />
+          <CommandList style={{ maxHeight: "calc(var(--radix-popover-content-available-height) - 72px)" }}>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              {allowNone && (
                 <CommandItem
-                  onSelect={() => setMode("create")}
+                  value=""
+                  className="py-2.5 sm:py-1.5"
+                  onSelect={() => {
+                    onValueChange("");
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === "" ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span className="text-muted-foreground italic">Ninguna</span>
+                </CommandItem>
+              )}
+              {options.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.label}
+                  className="py-2.5 sm:py-1.5"
+                  onSelect={() => {
+                    onValueChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === option.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {option.color ? (
+                    <span
+                      className="px-2 py-0.5 rounded text-xs font-medium"
+                      style={{
+                        backgroundColor: `${option.color}25`,
+                        color: option.color,
+                        filter: "brightness(0.85)",
+                      }}
+                    >
+                      {option.label}
+                    </span>
+                  ) : (
+                    option.label
+                  )}
+                </CommandItem>
+              ))}
+              {!isInlineCreating && (
+                <CommandItem
+                  onSelect={handleStartInlineCreate}
                   className="py-2.5 sm:py-1.5 text-primary"
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   {createLabel}
                 </CommandItem>
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        ) : (
-          createForm
-        )}
+              )}
+            </CommandGroup>
+          </CommandList>
+          {isInlineCreating && inlineCreateRow}
+        </Command>
       </PopoverContent>
     </Popover>
   );

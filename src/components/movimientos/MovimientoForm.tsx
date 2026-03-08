@@ -310,7 +310,7 @@ export function MovimientoForm({
                     return data.id;
                   }}
                   placeholder="Selecciona una categoría"
-                  createLabel="+ Crear categoría"
+                  createLabel="Crear categoría"
                 />
               </FormControl>
               <FormMessage />
@@ -363,7 +363,7 @@ export function MovimientoForm({
                       return data.id;
                     }}
                     placeholder="Selecciona una subcategoría (opcional)"
-                    createLabel="+ Crear subcategoría"
+                    createLabel="Crear subcategoría"
                     allowNone
                   />
                 </FormControl>
