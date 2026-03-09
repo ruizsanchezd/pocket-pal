@@ -159,7 +159,7 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Compra supermercado" {...field} />
+                <Input placeholder="Ej: Compra supermercado" autoFocus {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
