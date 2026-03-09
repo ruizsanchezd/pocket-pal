@@ -31,11 +31,27 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
   const [isHovering, setIsHovering] = React.useState(false);
+  const [keyboardShift, setKeyboardShift] = React.useState(0);
+
+  React.useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const initialHeight = vv.height;
+    const onResize = () => {
+      const keyboardHeight = initialHeight - vv.height;
+      setKeyboardShift(keyboardHeight > 100 ? keyboardHeight / 2 : 0);
+    };
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
 
   return (
     <DialogPortal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 overflow-y-auto overflow-x-hidden data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0">
-        <div className="flex flex-col min-h-full items-center">
+        <div
+          className="flex flex-col min-h-full items-center"
+          style={keyboardShift > 0 ? { transform: `translateY(-${keyboardShift}px)`, transition: 'transform 200ms ease-out' } : undefined}
+        >
 
           {/* Mobile: spacer que empuja la card al fondo (bottom sheet) */}
           <div className="flex-1 md:hidden" aria-hidden="true" />
