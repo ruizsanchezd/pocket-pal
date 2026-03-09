@@ -202,10 +202,11 @@ export function CreatableSelect({
       <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
         <DrawerContent
-          className={cn(isExpanded && "max-h-[100dvh] rounded-t-none")}
+          className={cn(isExpanded && "rounded-t-none")}
           style={{
             height: isExpanded ? '100dvh' : '85dvh',
-            transition: 'height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
+            maxHeight: isExpanded ? '100dvh' : '85dvh',
+            transition: 'height 300ms ease-in-out, max-height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
           }}
         >
           <DrawerHeader>
