@@ -84,13 +84,6 @@ export function MovimientoForm({
       conceptoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     };
 
-    // Wait for dialog animation (duration-200) before focusing
-    const FOCUS_DELAY = 250;
-
-    const focusTimer = setTimeout(() => {
-      conceptoRef.current?.focus();
-    }, FOCUS_DELAY);
-
     if (window.visualViewport) {
       let debounceTimer: ReturnType<typeof setTimeout>;
 
@@ -99,30 +92,22 @@ export function MovimientoForm({
         debounceTimer = setTimeout(scrollToCenter, 120);
       };
 
-      // Register listener just before focus fires so we catch the first resize
-      const listenerTimer = setTimeout(() => {
-        window.visualViewport!.addEventListener('resize', handleResize);
-      }, FOCUS_DELAY - 50);
+      window.visualViewport.addEventListener('resize', handleResize);
 
-      // Keep listener active 2s to handle iOS cold-start keyboard delay
+      // Keep listener active 2s to handle iOS cold-start keyboard delay on first open
       const cleanupTimer = setTimeout(() => {
         window.visualViewport!.removeEventListener('resize', handleResize);
         clearTimeout(debounceTimer);
-      }, FOCUS_DELAY + 2000);
+      }, 2000);
 
       return () => {
-        clearTimeout(focusTimer);
-        clearTimeout(listenerTimer);
+        window.visualViewport!.removeEventListener('resize', handleResize);
         clearTimeout(debounceTimer);
         clearTimeout(cleanupTimer);
-        window.visualViewport!.removeEventListener('resize', handleResize);
       };
     } else {
-      const scrollTimer = setTimeout(scrollToCenter, FOCUS_DELAY + 500);
-      return () => {
-        clearTimeout(focusTimer);
-        clearTimeout(scrollTimer);
-      };
+      const timer = setTimeout(scrollToCenter, 500);
+      return () => clearTimeout(timer);
     }
   }, [initialData]);
 
@@ -211,6 +196,7 @@ export function MovimientoForm({
               <FormControl>
                 <Input
                   placeholder="Ej: Compra supermercado"
+                  autoFocus
                   {...field}
                   ref={(el) => {
                     field.ref(el);
