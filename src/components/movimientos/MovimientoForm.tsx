@@ -28,7 +28,7 @@ import {
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, MovimientoConRelaciones } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,7 +59,6 @@ export function MovimientoForm({
   const haptic = useWebHaptics();
   const isMobile = useIsMobile();
   const prevSignRef = useRef<1 | -1>(1);
-  const conceptoRef = useRef<HTMLInputElement | null>(null);
   const [sign, setSign] = useState<1 | -1>(() => {
     if (initialData?.cantidad !== undefined) return Number(initialData.cantidad) >= 0 ? 1 : -1;
     return -1;
@@ -76,65 +75,6 @@ export function MovimientoForm({
       subcategoria_id: initialData?.subcategoria_id || undefined
     }
   });
-
-  useEffect(() => {
-    if (initialData) return;
-
-    // Add scroll room: the overlay has no overflow by default (spacer + content = 100%),
-    // so scrollIntoView is a no-op. Adding padding creates the overflow we need.
-    const el = conceptoRef.current;
-    const scrollContainer = el?.closest('.overflow-y-auto') as HTMLElement | null;
-    const innerDiv = scrollContainer?.firstElementChild as HTMLElement | null;
-    if (innerDiv) innerDiv.style.paddingBottom = '50vh';
-
-    // Manual scroll calculation using visualViewport.height (the actual visible area
-    // above the keyboard). scrollIntoView({ block: 'center' }) centers relative to
-    // the full layout viewport, not the visual viewport — so we calculate manually.
-    const centerInput = () => {
-      if (!el || !scrollContainer) return;
-      const vvHeight = window.visualViewport?.height || window.innerHeight;
-      const elRect = el.getBoundingClientRect();
-      const containerRect = scrollContainer.getBoundingClientRect();
-      const elTopInContent = scrollContainer.scrollTop + elRect.top - containerRect.top;
-      const targetScroll = elTopInContent - (vvHeight / 2) + (el.offsetHeight / 2);
-      scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-    };
-
-    if (window.visualViewport) {
-      let debounceTimer: ReturnType<typeof setTimeout>;
-      let lastHeight = window.visualViewport.height;
-
-      const handleResize = () => {
-        const h = window.visualViewport!.height;
-        if (h < lastHeight) {
-          // Only scroll when viewport shrinks (keyboard appearing), not when it grows
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(centerInput, 120);
-        }
-        lastHeight = h;
-      };
-
-      window.visualViewport.addEventListener('resize', handleResize);
-
-      const cleanupTimer = setTimeout(() => {
-        window.visualViewport!.removeEventListener('resize', handleResize);
-        clearTimeout(debounceTimer);
-      }, 2000);
-
-      return () => {
-        window.visualViewport!.removeEventListener('resize', handleResize);
-        clearTimeout(debounceTimer);
-        clearTimeout(cleanupTimer);
-        if (innerDiv) innerDiv.style.paddingBottom = '';
-      };
-    } else {
-      const timer = setTimeout(centerInput, 500);
-      return () => {
-        clearTimeout(timer);
-        if (innerDiv) innerDiv.style.paddingBottom = '';
-      };
-    }
-  }, [initialData]);
 
   const cantidad = form.watch('cantidad');
   const categoriaId = form.watch('categoria_id');
@@ -219,15 +159,7 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Ej: Compra supermercado"
-                  autoFocus
-                  {...field}
-                  ref={(el) => {
-                    field.ref(el);
-                    conceptoRef.current = el;
-                  }}
-                />
+                <Input placeholder="Ej: Compra supermercado" autoFocus {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
