@@ -80,21 +80,42 @@ export function MovimientoForm({
   useEffect(() => {
     if (initialData) return;
 
-    const scrollToCenter = () => {
-      conceptoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // Add scroll room: the overlay has no overflow by default (spacer + content = 100%),
+    // so scrollIntoView is a no-op. Adding padding creates the overflow we need.
+    const el = conceptoRef.current;
+    const scrollContainer = el?.closest('.overflow-y-auto') as HTMLElement | null;
+    const innerDiv = scrollContainer?.firstElementChild as HTMLElement | null;
+    if (innerDiv) innerDiv.style.paddingBottom = '50vh';
+
+    // Manual scroll calculation using visualViewport.height (the actual visible area
+    // above the keyboard). scrollIntoView({ block: 'center' }) centers relative to
+    // the full layout viewport, not the visual viewport — so we calculate manually.
+    const centerInput = () => {
+      if (!el || !scrollContainer) return;
+      const vvHeight = window.visualViewport?.height || window.innerHeight;
+      const elRect = el.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const elTopInContent = scrollContainer.scrollTop + elRect.top - containerRect.top;
+      const targetScroll = elTopInContent - (vvHeight / 2) + (el.offsetHeight / 2);
+      scrollContainer.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
     };
 
     if (window.visualViewport) {
       let debounceTimer: ReturnType<typeof setTimeout>;
+      let lastHeight = window.visualViewport.height;
 
       const handleResize = () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(scrollToCenter, 120);
+        const h = window.visualViewport!.height;
+        if (h < lastHeight) {
+          // Only scroll when viewport shrinks (keyboard appearing), not when it grows
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(centerInput, 120);
+        }
+        lastHeight = h;
       };
 
       window.visualViewport.addEventListener('resize', handleResize);
 
-      // Keep listener active 2s to handle iOS cold-start keyboard delay on first open
       const cleanupTimer = setTimeout(() => {
         window.visualViewport!.removeEventListener('resize', handleResize);
         clearTimeout(debounceTimer);
@@ -104,10 +125,14 @@ export function MovimientoForm({
         window.visualViewport!.removeEventListener('resize', handleResize);
         clearTimeout(debounceTimer);
         clearTimeout(cleanupTimer);
+        if (innerDiv) innerDiv.style.paddingBottom = '';
       };
     } else {
-      const timer = setTimeout(scrollToCenter, 500);
-      return () => clearTimeout(timer);
+      const timer = setTimeout(centerInput, 500);
+      return () => {
+        clearTimeout(timer);
+        if (innerDiv) innerDiv.style.paddingBottom = '';
+      };
     }
   }, [initialData]);
 
