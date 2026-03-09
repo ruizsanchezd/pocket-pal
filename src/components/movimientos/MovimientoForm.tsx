@@ -85,12 +85,19 @@ export function MovimientoForm({
     };
 
     if (window.visualViewport) {
+      let debounceTimer: ReturnType<typeof setTimeout>;
       const handleResize = () => {
-        setTimeout(scrollToCenter, 50);
-        window.visualViewport!.removeEventListener('resize', handleResize);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          scrollToCenter();
+          window.visualViewport!.removeEventListener('resize', handleResize);
+        }, 150);
       };
       window.visualViewport.addEventListener('resize', handleResize);
-      return () => window.visualViewport!.removeEventListener('resize', handleResize);
+      return () => {
+        window.visualViewport!.removeEventListener('resize', handleResize);
+        clearTimeout(debounceTimer);
+      };
     } else {
       const timer = setTimeout(scrollToCenter, 500);
       return () => clearTimeout(timer);

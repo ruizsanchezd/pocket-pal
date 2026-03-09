@@ -50,6 +50,7 @@ export function CreatableSelect({
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const collapseTimer = React.useRef<ReturnType<typeof setTimeout>>();
   const [isInlineCreating, setIsInlineCreating] = React.useState(false);
   const [createValue, setCreateValue] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
@@ -113,7 +114,13 @@ export function CreatableSelect({
   };
 
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setIsExpanded(e.currentTarget.scrollTop > 0);
+    const scrollTop = e.currentTarget.scrollTop;
+    if (scrollTop > 0) {
+      clearTimeout(collapseTimer.current);
+      setIsExpanded(true);
+    } else {
+      collapseTimer.current = setTimeout(() => setIsExpanded(false), 80);
+    }
   };
 
   const handleStartInlineCreate = () => {
@@ -198,7 +205,7 @@ export function CreatableSelect({
           className={cn(isExpanded && "max-h-[100dvh] rounded-t-none")}
           style={{
             height: isExpanded ? '100dvh' : '85dvh',
-            transition: 'height 250ms ease-out, border-top-left-radius 250ms ease-out, border-top-right-radius 250ms ease-out',
+            transition: 'height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
           }}
         >
           <DrawerHeader>
