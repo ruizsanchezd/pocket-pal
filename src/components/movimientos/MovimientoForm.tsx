@@ -79,14 +79,22 @@ export function MovimientoForm({
 
   useEffect(() => {
     if (initialData) return;
-    const focusTimer = setTimeout(() => {
-      conceptoRef.current?.focus();
-      const scrollTimer = setTimeout(() => {
-        conceptoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }, 400);
-      return () => clearTimeout(scrollTimer);
-    }, 100);
-    return () => clearTimeout(focusTimer);
+
+    const scrollToCenter = () => {
+      conceptoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+
+    if (window.visualViewport) {
+      const handleResize = () => {
+        setTimeout(scrollToCenter, 50);
+        window.visualViewport!.removeEventListener('resize', handleResize);
+      };
+      window.visualViewport.addEventListener('resize', handleResize);
+      return () => window.visualViewport!.removeEventListener('resize', handleResize);
+    } else {
+      const timer = setTimeout(scrollToCenter, 500);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const cantidad = form.watch('cantidad');
@@ -174,6 +182,7 @@ export function MovimientoForm({
               <FormControl>
                 <Input
                   placeholder="Ej: Compra supermercado"
+                  autoFocus
                   {...field}
                   ref={(el) => {
                     field.ref(el);

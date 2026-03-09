@@ -194,10 +194,13 @@ export function CreatableSelect({
     return (
       <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-        <DrawerContent className={cn(
-          "transition-[max-height,border-radius] duration-300 ease-in-out",
-          isExpanded ? "max-h-[100dvh] rounded-t-none" : "max-h-[85dvh]"
-        )}>
+        <DrawerContent
+          className={cn(isExpanded && "max-h-[100dvh] rounded-t-none")}
+          style={{
+            height: isExpanded ? '100dvh' : '85dvh',
+            transition: 'height 250ms ease-out, border-top-left-radius 250ms ease-out, border-top-right-radius 250ms ease-out',
+          }}
+        >
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
