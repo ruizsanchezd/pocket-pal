@@ -49,6 +49,7 @@ export function CreatableSelect({
 }: CreatableSelectProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [isInlineCreating, setIsInlineCreating] = React.useState(false);
   const [createValue, setCreateValue] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
@@ -107,7 +108,12 @@ export function CreatableSelect({
       setIsInlineCreating(false);
       setCreateValue("");
       setError("");
+      setIsExpanded(false);
     }
+  };
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setIsExpanded(e.currentTarget.scrollTop > 0);
   };
 
   const handleStartInlineCreate = () => {
@@ -188,11 +194,14 @@ export function CreatableSelect({
     return (
       <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-        <DrawerContent>
+        <DrawerContent className={cn(
+          "transition-[max-height,border-radius] duration-300 ease-in-out",
+          isExpanded ? "max-h-[100dvh] rounded-t-none" : "max-h-[85dvh]"
+        )}>
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8" data-vaul-no-drag>
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
             {allowNone && (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"

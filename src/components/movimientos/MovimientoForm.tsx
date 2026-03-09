@@ -28,7 +28,7 @@ import {
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, MovimientoConRelaciones } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +59,7 @@ export function MovimientoForm({
   const haptic = useWebHaptics();
   const isMobile = useIsMobile();
   const prevSignRef = useRef<1 | -1>(1);
+  const conceptoRef = useRef<HTMLInputElement | null>(null);
   const [sign, setSign] = useState<1 | -1>(() => {
     if (initialData?.cantidad !== undefined) return Number(initialData.cantidad) >= 0 ? 1 : -1;
     return -1;
@@ -75,6 +76,18 @@ export function MovimientoForm({
       subcategoria_id: initialData?.subcategoria_id || undefined
     }
   });
+
+  useEffect(() => {
+    if (initialData) return;
+    const focusTimer = setTimeout(() => {
+      conceptoRef.current?.focus();
+      const scrollTimer = setTimeout(() => {
+        conceptoRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 400);
+      return () => clearTimeout(scrollTimer);
+    }, 100);
+    return () => clearTimeout(focusTimer);
+  }, []);
 
   const cantidad = form.watch('cantidad');
   const categoriaId = form.watch('categoria_id');
@@ -159,7 +172,14 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Compra supermercado" autoFocus {...field} />
+                <Input
+                  placeholder="Ej: Compra supermercado"
+                  {...field}
+                  ref={(el) => {
+                    field.ref(el);
+                    conceptoRef.current = el;
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
