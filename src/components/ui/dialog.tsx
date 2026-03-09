@@ -26,25 +26,29 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
-// Persists across mounts: true = cold keyboard expected (first open or backdrop dismiss).
-// false = warm keyboard (dialog was closed via a button — iOS Safari centers natively).
-let expectColdKeyboard = true;
-
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, onInteractOutside, onCloseAutoFocus, ...props }, ref) => {
+>(({ className, children, ...props }, ref) => {
   const [isHovering, setIsHovering] = React.useState(false);
   const [keyboardShift, setKeyboardShift] = React.useState(0);
-  const closedViaBackdrop = React.useRef(false);
 
   React.useEffect(() => {
     const vv = window.visualViewport;
-    if (!vv || !expectColdKeyboard) return;
+    if (!vv) return;
     const initialHeight = vv.height;
     const onResize = () => {
       const keyboardHeight = initialHeight - vv.height;
-      setKeyboardShift(keyboardHeight > 100 ? keyboardHeight / 2 : 0);
+      if (keyboardHeight < 100) { setKeyboardShift(0); return; }
+      // Use the actual focused input position to calculate the exact shift needed.
+      // If iOS already centered it (warm keyboard), shift will be 0 or minimal.
+      // If iOS left it below center (cold keyboard), we shift exactly enough.
+      const active = document.activeElement as HTMLElement | null;
+      if (!active || !['INPUT', 'TEXTAREA'].includes(active.tagName)) { setKeyboardShift(0); return; }
+      const rect = active.getBoundingClientRect();
+      const inputCenter = rect.top + rect.height / 2;
+      const desiredCenter = vv.height / 2;
+      setKeyboardShift(Math.max(0, inputCenter - desiredCenter));
     };
     vv.addEventListener('resize', onResize);
     return () => vv.removeEventListener('resize', onResize);
@@ -84,15 +88,6 @@ const DialogContent = React.forwardRef<
             style={{
               transform: isHovering ? "translateY(8px)" : "translateY(0)",
               transition: "transform 200ms ease-out",
-            }}
-            onInteractOutside={(e) => {
-              closedViaBackdrop.current = true;
-              onInteractOutside?.(e);
-            }}
-            onCloseAutoFocus={(e) => {
-              expectColdKeyboard = closedViaBackdrop.current;
-              closedViaBackdrop.current = false;
-              onCloseAutoFocus?.(e);
             }}
             {...props}
           >
