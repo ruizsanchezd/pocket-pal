@@ -211,7 +211,7 @@ export function CreatableSelect({
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
             {allowNone && (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"

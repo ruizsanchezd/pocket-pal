@@ -91,7 +91,7 @@ export function MovimientoForm({
         debounceTimer = setTimeout(() => {
           scrollToCenter();
           window.visualViewport!.removeEventListener('resize', handleResize);
-        }, 150);
+        }, 400);
       };
       window.visualViewport.addEventListener('resize', handleResize);
       return () => {
