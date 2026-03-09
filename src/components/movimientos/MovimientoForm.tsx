@@ -103,18 +103,13 @@ export function MovimientoForm({
     if (window.visualViewport) {
       let debounceTimer: ReturnType<typeof setTimeout>;
       let lastHeight = window.visualViewport.height;
-      const mountTime = Date.now();
 
       const handleResize = () => {
         const h = window.visualViewport!.height;
         if (h < lastHeight) {
           // Only scroll when viewport shrinks (keyboard appearing), not when it grows
           clearTimeout(debounceTimer);
-          // Ensure centerInput runs after the dialog animation (200ms) completes.
-          // getBoundingClientRect() returns incorrect coords during CSS transform animations.
-          const elapsed = Date.now() - mountTime;
-          const delay = Math.max(0, 220 - elapsed) + 120;
-          debounceTimer = setTimeout(centerInput, delay);
+          debounceTimer = setTimeout(centerInput, 120);
         }
         lastHeight = h;
       };
