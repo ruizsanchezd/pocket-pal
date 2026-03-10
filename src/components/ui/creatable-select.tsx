@@ -127,8 +127,10 @@ export function CreatableSelect({
     setIsInlineCreating(true);
     setCreateValue("");
     setError("");
-    // Focus after render
-    setTimeout(() => inlineInputRef.current?.focus(), 0);
+    setTimeout(() => {
+      inlineInputRef.current?.focus();
+      inlineInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   };
 
   const triggerButton = (
@@ -264,6 +266,7 @@ export function CreatableSelect({
                 <div className="flex items-center gap-2 px-2 py-2 rounded-lg border">
                   <Plus className="h-4 w-4 text-primary shrink-0" />
                   <input
+                    ref={inlineInputRef}
                     value={createValue}
                     onChange={(e) => {
                       setCreateValue(e.target.value);
@@ -278,14 +281,22 @@ export function CreatableSelect({
                         handleCancelInline();
                       }
                     }}
-                    placeholder="Nombre... (Enter para guardar)"
+                    placeholder="Nombre..."
                     className="flex-1 bg-transparent outline-none text-base placeholder:text-muted-foreground"
                     disabled={isSaving}
                     autoFocus
                     autoComplete="off"
                   />
-                  {isSaving && (
+                  {isSaving ? (
                     <span className="text-xs text-muted-foreground shrink-0">Guardando…</span>
+                  ) : createValue.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCreate}
+                      className="shrink-0 p-1.5 rounded-md bg-primary text-primary-foreground"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
                 {error && (
