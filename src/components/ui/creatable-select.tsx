@@ -127,10 +127,6 @@ export function CreatableSelect({
     setIsInlineCreating(true);
     setCreateValue("");
     setError("");
-    setTimeout(() => {
-      inlineInputRef.current?.focus();
-      inlineInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 0);
   };
 
   const triggerButton = (
@@ -208,7 +204,7 @@ export function CreatableSelect({
           style={{
             height: isExpanded ? '100dvh' : '85dvh',
             maxHeight: isExpanded ? '100dvh' : '85dvh',
-            transition: 'height 300ms ease-in-out, max-height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
+            transition: isInlineCreating ? 'none' : 'height 300ms ease-in-out, max-height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
           }}
         >
           <DrawerHeader>
@@ -253,7 +249,7 @@ export function CreatableSelect({
                 )}
               </button>
             ))}
-            {!isInlineCreating ? (
+            {!isInlineCreating && (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 text-primary active:bg-accent"
                 onClick={handleStartInlineCreate}
@@ -261,50 +257,51 @@ export function CreatableSelect({
                 <Plus className="h-4 w-4 shrink-0" />
                 <span className="text-base">{createLabel}</span>
               </button>
-            ) : (
-              <div className="py-2">
-                <div className="flex items-center gap-2 px-2 py-2 rounded-lg border">
-                  <Plus className="h-4 w-4 text-primary shrink-0" />
-                  <input
-                    ref={inlineInputRef}
-                    value={createValue}
-                    onChange={(e) => {
-                      setCreateValue(e.target.value);
-                      setError("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleCreate();
-                      } else if (e.key === "Escape") {
-                        e.preventDefault();
-                        handleCancelInline();
-                      }
-                    }}
-                    placeholder="Nombre..."
-                    className="flex-1 bg-transparent outline-none text-base placeholder:text-muted-foreground"
-                    disabled={isSaving}
-                    autoFocus
-                    autoComplete="off"
-                  />
-                  {isSaving ? (
-                    <span className="text-xs text-muted-foreground shrink-0">Guardando…</span>
-                  ) : createValue.trim().length > 0 && (
-                    <button
-                      type="button"
-                      onClick={handleCreate}
-                      className="shrink-0 p-1.5 rounded-md bg-primary text-primary-foreground"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                {error && (
-                  <p className="px-2 pt-1 text-xs text-destructive">{error}</p>
-                )}
-              </div>
             )}
           </div>
+          {isInlineCreating && (
+            <div className="border-t px-4 py-3">
+              <div className="flex items-center gap-2 rounded-lg border px-3 py-2">
+                <Plus className="h-4 w-4 text-primary shrink-0" />
+                <input
+                  ref={inlineInputRef}
+                  value={createValue}
+                  onChange={(e) => {
+                    setCreateValue(e.target.value);
+                    setError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreate();
+                    } else if (e.key === "Escape") {
+                      e.preventDefault();
+                      handleCancelInline();
+                    }
+                  }}
+                  placeholder="Nombre..."
+                  className="flex-1 bg-transparent outline-none text-base placeholder:text-muted-foreground"
+                  disabled={isSaving}
+                  autoFocus
+                  autoComplete="off"
+                />
+                {isSaving ? (
+                  <span className="text-xs text-muted-foreground shrink-0">Guardando…</span>
+                ) : createValue.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleCreate}
+                    className="shrink-0 p-1.5 rounded-md bg-primary text-primary-foreground"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {error && (
+                <p className="px-2 pt-1 text-xs text-destructive">{error}</p>
+              )}
+            </div>
+          )}
         </DrawerContent>
       </Drawer>
     );

@@ -19,7 +19,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
@@ -76,6 +78,13 @@ export default function Movimientos() {
   const todasSubcategorias = useMemo(() => {
     return categorias.filter(c => c.parent_id);
   }, [categorias]);
+
+  const subcategoriasFiltradas = useMemo(() => {
+    if (filtroCategoria !== '__all__') {
+      return todasSubcategorias.filter(s => s.parent_id === filtroCategoria);
+    }
+    return todasSubcategorias;
+  }, [todasSubcategorias, filtroCategoria]);
 
   // Filter movements
   const filteredMovimientos = useMemo(() => {
@@ -515,7 +524,13 @@ export default function Movimientos() {
                       </SelectContent>
                     </Select>
 
-                    <Select value={filtroSubcategoria} onValueChange={setFiltroSubcategoria}>
+                    <Select value={filtroSubcategoria} onValueChange={(v) => {
+                      setFiltroSubcategoria(v);
+                      if (v !== '__all__' && filtroCategoria === '__all__') {
+                        const sub = todasSubcategorias.find(s => s.id === v);
+                        if (sub?.parent_id) setFiltroCategoria(sub.parent_id);
+                      }
+                    }}>
                       <SelectTrigger className="flex-1 sm:w-[150px]">
                         <SelectValue>
                           {filtroSubcategoria === '__all__' ? (
@@ -535,16 +550,38 @@ export default function Movimientos() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__all__">Todas</SelectItem>
-                        {todasSubcategorias.map(sub => (
-                          <SelectItem key={sub.id} value={sub.id}>
-                            <span
-                              className="px-2 py-0.5 rounded text-xs font-medium"
-                              style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
-                            >
-                              {sub.nombre}
-                            </span>
-                          </SelectItem>
-                        ))}
+                        {filtroCategoria !== '__all__' ? (
+                          subcategoriasFiltradas.map(sub => (
+                            <SelectItem key={sub.id} value={sub.id}>
+                              <span
+                                className="px-2 py-0.5 rounded text-xs font-medium"
+                                style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                              >
+                                {sub.nombre}
+                              </span>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          categoriasParent.map(parent => {
+                            const hijas = todasSubcategorias.filter(s => s.parent_id === parent.id);
+                            if (hijas.length === 0) return null;
+                            return (
+                              <SelectGroup key={parent.id} className="mt-2 first:mt-0">
+                                <SelectLabel className="text-xs text-muted-foreground">{parent.nombre}</SelectLabel>
+                                {hijas.map(sub => (
+                                  <SelectItem key={sub.id} value={sub.id}>
+                                    <span
+                                      className="px-2 py-0.5 rounded text-xs font-medium"
+                                      style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                                    >
+                                      {sub.nombre}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            );
+                          })
+                        )}
                       </SelectContent>
                     </Select>
 
