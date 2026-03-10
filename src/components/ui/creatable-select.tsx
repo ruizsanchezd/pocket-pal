@@ -127,6 +127,9 @@ export function CreatableSelect({
     setIsInlineCreating(true);
     setCreateValue("");
     setError("");
+    if (!isMobile) {
+      setTimeout(() => inlineInputRef.current?.focus(), 0);
+    }
   };
 
   const triggerButton = (
