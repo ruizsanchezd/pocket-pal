@@ -29,7 +29,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, onOpenAutoFocus, ...props }, ref) => {
   const [isHovering, setIsHovering] = React.useState(false);
   const [keyboardShift, setKeyboardShift] = React.useState(0);
 
@@ -88,6 +88,10 @@ const DialogContent = React.forwardRef<
             style={{
               transform: isHovering ? "translateY(8px)" : "translateY(0)",
               transition: "transform 200ms ease-out",
+            }}
+            onOpenAutoFocus={(e) => {
+              setIsHovering(false);
+              onOpenAutoFocus?.(e);
             }}
             {...props}
           >
