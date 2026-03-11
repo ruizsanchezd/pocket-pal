@@ -12,6 +12,12 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { GastoRecurrenteForm } from '@/components/configuracion/GastoRecurrenteForm';
 import { useToast } from '@/hooks/use-toast';
 import { useWebHaptics } from 'web-haptics/react';
@@ -21,7 +27,8 @@ import {
   CreditCard,
   Loader2,
   Pause,
-  Play
+  Play,
+  MoreHorizontal
 } from 'lucide-react';
 import { GastoRecurrente, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
@@ -119,7 +126,7 @@ export default function ConfigRecurrentes() {
           .update({
             concepto: data.concepto,
             cantidad: data.cantidad,
-            dia_del_mes: data.dia_del_mes,
+            dia_del_mes: 1,
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
@@ -155,7 +162,7 @@ export default function ConfigRecurrentes() {
             user_id: user.id,
             concepto: data.concepto,
             cantidad: data.cantidad,
-            dia_del_mes: data.dia_del_mes,
+            dia_del_mes: 1,
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
@@ -286,26 +293,23 @@ export default function ConfigRecurrentes() {
                     <div
                       key={gasto.id}
                       className={cn(
-                        "flex flex-col gap-3 p-4 rounded-lg border sm:flex-row sm:items-center sm:justify-between",
+                        "flex items-center justify-between gap-3 p-4 rounded-lg border cursor-pointer hover:bg-muted/30",
                         !gasto.activo && "opacity-50"
                       )}
+                      onClick={() => handleEdit(gasto)}
                     >
-                      <div className="space-y-1 min-w-0 cursor-pointer" onClick={() => handleEdit(gasto)}>
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="font-medium truncate">{gasto.concepto}</span>
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div>
+                          <span className="font-medium">{gasto.concepto}</span>
                           <span className={cn(
-                            "font-bold",
+                            "font-bold ml-2",
                             gasto.cantidad >= 0 ? "text-green-600" : "text-destructive"
                           )}>
                             {formatCurrency(Number(gasto.cantidad))}
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                          {gasto.dia_del_mes && (
-                            <span>Día {gasto.dia_del_mes}</span>
-                          )}
-                          <span>•</span>
-                          <span 
+                          <span
                             className="px-2 py-0.5 rounded text-xs"
                             style={{ backgroundColor: `${gasto.cuenta?.color}20` }}
                           >
@@ -322,11 +326,34 @@ export default function ConfigRecurrentes() {
                         </div>
                       </div>
 
-                      <div className="flex gap-2 w-full sm:w-auto sm:shrink-0">
+                      {/* Mobile: dropdown de 3 puntitos */}
+                      <div className="sm:hidden shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="p-1 rounded hover:bg-muted outline-none">
+                            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleToggleActive(gasto)} className="py-2.5 px-4">
+                              {gasto.activo ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
+                              {gasto.activo ? "Pausar" : "Reanudar"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setDeleteConfirm(gasto.id)}
+                              className="py-2.5 px-4 text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {/* Desktop: botones expandidos */}
+                      <div className="hidden sm:flex gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant={gasto.activo ? "secondary" : "outline"}
                           onClick={() => handleToggleActive(gasto)}
-                          className="h-9 px-3 text-sm flex-1 sm:flex-none"
+                          className="h-9 px-3 text-sm"
                         >
                           {gasto.activo ? <Pause className="h-4 w-4 mr-0.5" /> : <Play className="h-4 w-4 mr-0.5" />}
                           {gasto.activo ? "Pausar" : "Reanudar"}
@@ -348,7 +375,7 @@ export default function ConfigRecurrentes() {
 
           {/* Create/Edit Modal */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>
                   {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}

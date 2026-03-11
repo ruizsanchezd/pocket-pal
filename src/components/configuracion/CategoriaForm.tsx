@@ -85,7 +85,6 @@ export function CategoriaForm({
               <FormControl>
                 <Input
                   placeholder={isSubcategoria ? "Ej: Restaurantes" : "Ej: Alimentación"}
-                  autoFocus={!initialData}
                   {...field}
                 />
               </FormControl>

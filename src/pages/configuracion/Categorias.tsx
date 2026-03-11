@@ -118,15 +118,15 @@ export default function ConfigCategorias() {
           .update({
             nombre: data.nombre,
             color: data.color,
-            icono: data.icono
+            icono: null
           })
           .eq('id', editingCategoria.id);
 
         if (error) throw error;
 
-        setCategorias(categorias.map(c => 
-          c.id === editingCategoria.id 
-            ? { ...c, nombre: data.nombre, color: data.color, icono: data.icono }
+        setCategorias(categorias.map(c =>
+          c.id === editingCategoria.id
+            ? { ...c, nombre: data.nombre, color: data.color, icono: null }
             : c
         ));
 
@@ -154,7 +154,7 @@ export default function ConfigCategorias() {
             tipo,
             parent_id: parentCategoria?.id || null,
             color: data.color,
-            icono: data.icono,
+            icono: null,
             orden: categorias.filter(c => c.tipo === tipo).length
           })
           .select()
@@ -242,7 +242,7 @@ export default function ConfigCategorias() {
           style={{ marginLeft: `${level * 24}px` }}
           onClick={() => handleEdit(categoria)}
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 flex-1">
             {hasChildren ? (
               <button
                 onClick={(e) => { e.stopPropagation(); toggleExpanded(categoria.id); }}
@@ -261,7 +261,7 @@ export default function ConfigCategorias() {
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: categoria.color }}
             />
-            <span className="font-medium truncate">
+            <span className="font-medium">
               {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
               {categoria.nombre}
             </span>
@@ -350,7 +350,7 @@ export default function ConfigCategorias() {
 
           {/* Create/Edit Modal */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>
                   {editingCategoria ? 'Editar Categoría' : 

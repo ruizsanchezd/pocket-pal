@@ -175,13 +175,13 @@ export function ProfileSection() {
           Personaliza tu nombre y foto de perfil
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Avatar section */}
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Avatar className="h-20 w-20">
+        <div className="flex items-center gap-3">
+          <div className="relative shrink-0">
+            <Avatar className="h-14 w-14 sm:h-20 sm:w-20">
               <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.display_name || 'Usuario'} />
-              <AvatarFallback className="text-lg">{getInitials()}</AvatarFallback>
+              <AvatarFallback className="text-base sm:text-lg">{getInitials()}</AvatarFallback>
             </Avatar>
             <button
               onClick={handlePhotoClick}
@@ -202,18 +202,13 @@ export function ProfileSection() {
               className="hidden"
             />
           </div>
-          <div className="flex-1">
-            <p className="text-sm text-muted-foreground">
-              Haz clic en el icono de cámara para cambiar tu foto de perfil.
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Formatos: JPG, PNG, GIF. Máximo 2MB.
-            </p>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Toca el icono de cámara para cambiar tu foto. JPG, PNG o GIF, máx. 2MB.
+          </p>
         </div>
 
         {/* Name section */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="displayName">Nombre para mostrar</Label>
           <div className="flex gap-2">
             <Input
@@ -240,7 +235,7 @@ export function ProfileSection() {
         </div>
 
         {/* Email (read-only) */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label>Email</Label>
           <Input
             value={user?.email || ''}

@@ -402,11 +402,12 @@ export default function ConfigCuentas() {
           <div
             key={cuenta.id}
             className={cn(
-              "flex items-center justify-between p-4 rounded-lg border",
+              "flex items-center justify-between p-4 rounded-lg border cursor-pointer hover:bg-muted/30",
               !cuenta.activa && "opacity-50"
             )}
+            onClick={() => handleEdit(cuenta)}
           >
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleEdit(cuenta)}>
+            <div className="flex items-center gap-3">
               <div
                 className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: cuenta.color }}
@@ -442,7 +443,7 @@ export default function ConfigCuentas() {
             </div>
 
             <DropdownMenu>
-              <DropdownMenuTrigger className="p-1 rounded hover:bg-muted outline-none shrink-0">
+              <DropdownMenuTrigger className="p-1 rounded hover:bg-muted outline-none shrink-0" onClick={(e) => e.stopPropagation()}>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -516,7 +517,7 @@ export default function ConfigCuentas() {
           </Card>
 
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent>
+            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>
                   {editingCuenta ? 'Editar Cuenta' : 'Nueva Cuenta'}

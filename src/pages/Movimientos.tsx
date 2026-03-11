@@ -372,7 +372,7 @@ export default function Movimientos() {
 
     templates.forEach(t => {
       const fechaStr = format(
-        new Date(date.getFullYear(), date.getMonth(), t.dia_del_mes || 1),
+        new Date(date.getFullYear(), date.getMonth(), 1),
         'yyyy-MM-dd'
       );
 

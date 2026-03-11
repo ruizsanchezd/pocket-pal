@@ -172,7 +172,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       </header>
 
       {/* Main content */}
-      <main className="container py-4 md:py-6">
+      <main className="container pt-6 pb-4 md:py-6">
         {children}
       </main>
 

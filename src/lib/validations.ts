@@ -106,12 +106,6 @@ export const gastoRecurrenteSchema = z.object({
       invalid_type_error: 'Introduce un número válido'
     })
     .refine((val) => val !== 0, 'La cantidad no puede ser 0'),
-  dia_del_mes: z
-    .number()
-    .int()
-    .min(1, 'El día debe ser entre 1 y 31')
-    .max(31, 'El día debe ser entre 1 y 31')
-    .optional(),
   cuenta_id: z.string().min(1, 'Selecciona una cuenta'),
   categoria_id: z.string().min(1, 'Selecciona una categoría'),
   subcategoria_id: z.string().optional(),

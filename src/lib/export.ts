@@ -100,14 +100,13 @@ export function generateRecurrentesCSV(
   cuentas: Cuenta[], 
   categorias: Categoria[]
 ): string {
-  const headers = ['Concepto', 'Cantidad', 'Dia del Mes', 'Cuenta', 'Categoria', 'Notas', 'Activo'];
+  const headers = ['Concepto', 'Cantidad', 'Cuenta', 'Categoria', 'Notas', 'Activo'];
   const rows = recurrentes.map(r => {
     const cuenta = cuentas.find(c => c.id === r.cuenta_id);
     const categoria = categorias.find(c => c.id === r.categoria_id);
     return [
       r.concepto,
       r.cantidad.toString(),
-      (r.dia_del_mes ?? 1).toString(),
       cuenta?.nombre ?? '',
       categoria?.nombre ?? '',
       r.notas ?? '',

@@ -56,7 +56,6 @@ export function GastoRecurrenteForm({
     defaultValues: {
       concepto: initialData?.concepto || '',
       cantidad: initialData?.cantidad ? Number(initialData.cantidad) : undefined,
-      dia_del_mes: initialData?.dia_del_mes || 1,
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || '',
       categoria_id: initialData?.categoria_id || '',
       subcategoria_id: initialData?.subcategoria_id || undefined,
@@ -113,60 +112,38 @@ export function GastoRecurrenteForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Alquiler" autoFocus={!initialData} {...field} />
+                <Input placeholder="Ej: Alquiler" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-[1fr_auto] gap-4">
-          <FormField
-            control={form.control}
-            name="cantidad"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>
-                  {isTransfer ? 'Cantidad a transferir *' : 'Cantidad * (negativo = gasto)'}
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder={isTransfer ? '200' : '-900'}
-                    {...field}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      field.onChange(value ? parseFloat(value) : undefined);
-                    }}
-                    value={field.value ?? ''}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="dia_del_mes"
-            render={({ field }) => (
-              <FormItem className="w-28">
-                <FormLabel>Día del mes</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="cantidad"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>
+                {isTransfer ? 'Cantidad a transferir *' : 'Cantidad * (negativo = gasto)'}
+              </FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder={isTransfer ? '200' : '-900'}
+                  {...field}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(value ? parseFloat(value) : undefined);
+                  }}
+                  value={field.value ?? ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
