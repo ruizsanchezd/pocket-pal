@@ -5,7 +5,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -16,17 +15,17 @@ import {
 import { GastoRecurrenteForm } from '@/components/configuracion/GastoRecurrenteForm';
 import { useToast } from '@/hooks/use-toast';
 import { useWebHaptics } from 'web-haptics/react';
-import { 
-  Plus, 
-  Pencil, 
+import {
+  Plus,
   Trash2,
   CreditCard,
   Loader2,
-  ArrowLeft
+  Pause,
+  Play
 } from 'lucide-react';
 import { GastoRecurrente, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 
 interface GastoRecurrenteConRelaciones extends GastoRecurrente {
   cuenta?: Cuenta;
@@ -250,23 +249,16 @@ export default function ConfigRecurrentes() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link to="/configuracion">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Movimientos Recurrentes</h1>
-          </div>
+        <div className="space-y-4 md:space-y-6">
+          <MobileSubpageHeader title="Gestión de Recurrentes" backHref="/configuracion" />
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-muted"><CreditCard className="h-4 w-4 text-muted-foreground" /></div>
                 Movimientos Recurrentes
               </CardTitle>
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Nuevo Recurrente
               </Button>
@@ -294,13 +286,13 @@ export default function ConfigRecurrentes() {
                     <div
                       key={gasto.id}
                       className={cn(
-                        "flex items-center justify-between p-4 rounded-lg border",
+                        "flex flex-col gap-3 p-4 rounded-lg border sm:flex-row sm:items-center sm:justify-between",
                         !gasto.activo && "opacity-50"
                       )}
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <span className="font-medium">{gasto.concepto}</span>
+                      <div className="space-y-1 min-w-0 cursor-pointer" onClick={() => handleEdit(gasto)}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="font-medium truncate">{gasto.concepto}</span>
                           <span className={cn(
                             "font-bold",
                             gasto.cantidad >= 0 ? "text-green-600" : "text-destructive"
@@ -308,7 +300,7 @@ export default function ConfigRecurrentes() {
                             {formatCurrency(Number(gasto.cantidad))}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                           {gasto.dia_del_mes && (
                             <span>Día {gasto.dia_del_mes}</span>
                           )}
@@ -330,23 +322,19 @@ export default function ConfigRecurrentes() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={gasto.activo}
-                          onCheckedChange={() => handleToggleActive(gasto)}
-                        />
+                      <div className="flex gap-2 w-full sm:w-auto sm:shrink-0">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(gasto)}
+                          variant={gasto.activo ? "secondary" : "outline"}
+                          onClick={() => handleToggleActive(gasto)}
+                          className="h-9 px-3 text-sm flex-1 sm:flex-none"
                         >
-                          <Pencil className="h-4 w-4" />
+                          {gasto.activo ? <Pause className="h-4 w-4 mr-0.5" /> : <Play className="h-4 w-4 mr-0.5" />}
+                          {gasto.activo ? "Pausar" : "Reanudar"}
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
                           onClick={() => setDeleteConfirm(gasto.id)}
-                          className="text-destructive"
+                          className="h-9 w-9 p-0 shrink-0 text-destructive hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

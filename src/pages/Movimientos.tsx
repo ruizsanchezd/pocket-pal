@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { format, parse, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -26,6 +26,12 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -35,6 +41,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MovimientoForm } from '@/components/movimientos/MovimientoForm';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ChevronLeft,
   ChevronRight,
@@ -43,6 +50,8 @@ import {
   Receipt,
   Loader2,
   AlertCircle,
+  Check,
+  ChevronDown,
 } from 'lucide-react';
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
 import { cn } from '@/lib/utils';
@@ -51,7 +60,8 @@ export default function Movimientos() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
-  
+  const isMobile = useIsMobile();
+
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([]);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
@@ -63,6 +73,30 @@ export default function Movimientos() {
   const [showRecurrenteBanner, setShowRecurrenteBanner] = useState(false);
   const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
   const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>('__all__');
+  const [drawerCategoriaOpen, setDrawerCategoriaOpen] = useState(false);
+  const [drawerCategoriaExpanded, setDrawerCategoriaExpanded] = useState(false);
+  const collapseTimerCategoria = useRef<ReturnType<typeof setTimeout>>();
+  const [drawerSubcategoriaOpen, setDrawerSubcategoriaOpen] = useState(false);
+  const [drawerSubcategoriaExpanded, setDrawerSubcategoriaExpanded] = useState(false);
+  const collapseTimerSubcategoria = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleScrollCategoria = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop > 0) {
+      clearTimeout(collapseTimerCategoria.current);
+      setDrawerCategoriaExpanded(true);
+    } else {
+      collapseTimerCategoria.current = setTimeout(() => setDrawerCategoriaExpanded(false), 80);
+    }
+  };
+
+  const handleScrollSubcategoria = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop > 0) {
+      clearTimeout(collapseTimerSubcategoria.current);
+      setDrawerSubcategoriaExpanded(true);
+    } else {
+      collapseTimerSubcategoria.current = setTimeout(() => setDrawerSubcategoriaExpanded(false), 80);
+    }
+  };
 
   // Format month for display
   const formattedMonth = useMemo(() => {
@@ -491,11 +525,16 @@ export default function Movimientos() {
                 {/* Filtros */}
                 {movimientos.length > 0 && (
                   <div className="flex flex-row gap-2 w-full sm:w-auto items-center">
-                    <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
-                      <SelectTrigger className="flex-1 sm:w-[150px]">
-                        <SelectValue>
+                    {isMobile ? (
+                      <>
+                        {/* Mobile: Drawer para categoría */}
+                        <button
+                          type="button"
+                          className="flex-1 flex items-center justify-between rounded-md border border-input bg-background px-3 h-10 text-sm"
+                          onClick={() => setDrawerCategoriaOpen(true)}
+                        >
                           {filtroCategoria === '__all__' ? (
-                            'Categoría'
+                            <span className="text-muted-foreground">Categoría</span>
                           ) : (() => {
                             const cat = categoriasParent.find(c => c.id === filtroCategoria);
                             return cat ? (
@@ -505,36 +544,57 @@ export default function Movimientos() {
                               >
                                 {cat.nombre}
                               </span>
-                            ) : null;
+                            ) : <span className="text-muted-foreground">Categoría</span>;
                           })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todas</SelectItem>
-                        {categoriasParent.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <span
-                              className="px-2 py-0.5 rounded text-xs font-medium"
-                              style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
-                            >
-                              {cat.nombre}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </button>
+                        <Drawer open={drawerCategoriaOpen} onOpenChange={(v) => { setDrawerCategoriaOpen(v); if (!v) setDrawerCategoriaExpanded(false); }} shouldScaleBackground={false}>
+                          <DrawerContent
+                            className={cn(drawerCategoriaExpanded && "rounded-t-none")}
+                            style={{
+                              height: drawerCategoriaExpanded ? '100dvh' : '85dvh',
+                              maxHeight: drawerCategoriaExpanded ? '100dvh' : '85dvh',
+                              transition: 'height 180ms ease-in-out, max-height 180ms ease-in-out, border-top-left-radius 180ms ease-in-out, border-top-right-radius 180ms ease-in-out',
+                            }}
+                          >
+                            <DrawerHeader>
+                              <DrawerTitle>Categoría</DrawerTitle>
+                            </DrawerHeader>
+                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollCategoria}>
+                              <button
+                                className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                                onClick={() => { setFiltroCategoria('__all__'); setFiltroSubcategoria('__all__'); setDrawerCategoriaOpen(false); }}
+                              >
+                                <Check className={cn("h-4 w-4 shrink-0", filtroCategoria === '__all__' ? "opacity-100" : "opacity-0")} />
+                                <span className="text-base text-muted-foreground italic">Todas</span>
+                              </button>
+                              {categoriasParent.map(cat => (
+                                <button
+                                  key={cat.id}
+                                  className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                                  onClick={() => { setFiltroCategoria(cat.id); setFiltroSubcategoria('__all__'); setDrawerCategoriaOpen(false); }}
+                                >
+                                  <Check className={cn("h-4 w-4 shrink-0", filtroCategoria === cat.id ? "opacity-100" : "opacity-0")} />
+                                  <span
+                                    className="px-2 py-0.5 rounded text-sm font-medium"
+                                    style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
+                                  >
+                                    {cat.nombre}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
 
-                    <Select value={filtroSubcategoria} onValueChange={(v) => {
-                      setFiltroSubcategoria(v);
-                      if (v !== '__all__' && filtroCategoria === '__all__') {
-                        const sub = todasSubcategorias.find(s => s.id === v);
-                        if (sub?.parent_id) setFiltroCategoria(sub.parent_id);
-                      }
-                    }}>
-                      <SelectTrigger className="flex-1 sm:w-[150px]">
-                        <SelectValue>
+                        {/* Mobile: Drawer para subcategoría */}
+                        <button
+                          type="button"
+                          className="flex-1 flex items-center justify-between rounded-md border border-input bg-background px-3 h-10 text-sm"
+                          onClick={() => setDrawerSubcategoriaOpen(true)}
+                        >
                           {filtroSubcategoria === '__all__' ? (
-                            'Subcategoría'
+                            <span className="text-muted-foreground">Subcategoría</span>
                           ) : (() => {
                             const sub = todasSubcategorias.find(s => s.id === filtroSubcategoria);
                             return sub ? (
@@ -544,47 +604,179 @@ export default function Movimientos() {
                               >
                                 {sub.nombre}
                               </span>
-                            ) : null;
+                            ) : <span className="text-muted-foreground">Subcategoría</span>;
                           })()}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">Todas</SelectItem>
-                        {filtroCategoria !== '__all__' ? (
-                          subcategoriasFiltradas.map(sub => (
-                            <SelectItem key={sub.id} value={sub.id}>
-                              <span
-                                className="px-2 py-0.5 rounded text-xs font-medium"
-                                style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                          <ChevronDown className="h-4 w-4 opacity-50 shrink-0 ml-2" />
+                        </button>
+                        <Drawer open={drawerSubcategoriaOpen} onOpenChange={(v) => { setDrawerSubcategoriaOpen(v); if (!v) setDrawerSubcategoriaExpanded(false); }} shouldScaleBackground={false}>
+                          <DrawerContent
+                            className={cn(drawerSubcategoriaExpanded && "rounded-t-none")}
+                            style={{
+                              height: drawerSubcategoriaExpanded ? '100dvh' : '85dvh',
+                              maxHeight: drawerSubcategoriaExpanded ? '100dvh' : '85dvh',
+                              transition: 'height 180ms ease-in-out, max-height 180ms ease-in-out, border-top-left-radius 180ms ease-in-out, border-top-right-radius 180ms ease-in-out',
+                            }}
+                          >
+                            <DrawerHeader>
+                              <DrawerTitle>Subcategoría</DrawerTitle>
+                            </DrawerHeader>
+                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollSubcategoria}>
+                              <button
+                                className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                                onClick={() => { setFiltroSubcategoria('__all__'); setDrawerSubcategoriaOpen(false); }}
                               >
-                                {sub.nombre}
-                              </span>
-                            </SelectItem>
-                          ))
-                        ) : (
-                          categoriasParent.map(parent => {
-                            const hijas = todasSubcategorias.filter(s => s.parent_id === parent.id);
-                            if (hijas.length === 0) return null;
-                            return (
-                              <SelectGroup key={parent.id} className="mt-2 first:mt-0">
-                                <SelectLabel className="text-xs text-muted-foreground">{parent.nombre}</SelectLabel>
-                                {hijas.map(sub => (
-                                  <SelectItem key={sub.id} value={sub.id}>
+                                <Check className={cn("h-4 w-4 shrink-0", filtroSubcategoria === '__all__' ? "opacity-100" : "opacity-0")} />
+                                <span className="text-base text-muted-foreground italic">Todas</span>
+                              </button>
+                              {filtroCategoria !== '__all__' ? (
+                                subcategoriasFiltradas.map(sub => (
+                                  <button
+                                    key={sub.id}
+                                    className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                                    onClick={() => { setFiltroSubcategoria(sub.id); setDrawerSubcategoriaOpen(false); }}
+                                  >
+                                    <Check className={cn("h-4 w-4 shrink-0", filtroSubcategoria === sub.id ? "opacity-100" : "opacity-0")} />
                                     <span
-                                      className="px-2 py-0.5 rounded text-xs font-medium"
+                                      className="px-2 py-0.5 rounded text-sm font-medium"
                                       style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
                                     >
                                       {sub.nombre}
                                     </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            );
-                          })
-                        )}
-                      </SelectContent>
-                    </Select>
+                                  </button>
+                                ))
+                              ) : (
+                                categoriasParent.map(parent => {
+                                  const hijas = todasSubcategorias.filter(s => s.parent_id === parent.id);
+                                  if (hijas.length === 0) return null;
+                                  return (
+                                    <div key={parent.id} className="mt-2 first:mt-0">
+                                      <p className="px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">{parent.nombre}</p>
+                                      {hijas.map(sub => (
+                                        <button
+                                          key={sub.id}
+                                          className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
+                                          onClick={() => {
+                                            setFiltroSubcategoria(sub.id);
+                                            setFiltroCategoria(sub.parent_id!);
+                                            setDrawerSubcategoriaOpen(false);
+                                          }}
+                                        >
+                                          <Check className={cn("h-4 w-4 shrink-0", filtroSubcategoria === sub.id ? "opacity-100" : "opacity-0")} />
+                                          <span
+                                            className="px-2 py-0.5 rounded text-sm font-medium"
+                                            style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                                          >
+                                            {sub.nombre}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </DrawerContent>
+                        </Drawer>
+                      </>
+                    ) : (
+                      <>
+                        {/* Desktop: Select estándar para categoría */}
+                        <Select value={filtroCategoria} onValueChange={(v) => { setFiltroCategoria(v); setFiltroSubcategoria('__all__'); }}>
+                          <SelectTrigger className="flex-1 sm:w-[150px]">
+                            <SelectValue>
+                              {filtroCategoria === '__all__' ? (
+                                'Categoría'
+                              ) : (() => {
+                                const cat = categoriasParent.find(c => c.id === filtroCategoria);
+                                return cat ? (
+                                  <span
+                                    className="px-2 py-0.5 rounded text-xs font-medium"
+                                    style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
+                                  >
+                                    {cat.nombre}
+                                  </span>
+                                ) : null;
+                              })()}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__all__">Todas</SelectItem>
+                            {categoriasParent.map(cat => (
+                              <SelectItem key={cat.id} value={cat.id}>
+                                <span
+                                  className="px-2 py-0.5 rounded text-xs font-medium"
+                                  style={{ backgroundColor: `${cat.color}25`, color: cat.color, filter: 'brightness(0.85)' }}
+                                >
+                                  {cat.nombre}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
 
+                        {/* Desktop: Select estándar para subcategoría */}
+                        <Select value={filtroSubcategoria} onValueChange={(v) => {
+                          setFiltroSubcategoria(v);
+                          if (v !== '__all__' && filtroCategoria === '__all__') {
+                            const sub = todasSubcategorias.find(s => s.id === v);
+                            if (sub?.parent_id) setFiltroCategoria(sub.parent_id);
+                          }
+                        }}>
+                          <SelectTrigger className="flex-1 sm:w-[150px]">
+                            <SelectValue>
+                              {filtroSubcategoria === '__all__' ? (
+                                'Subcategoría'
+                              ) : (() => {
+                                const sub = todasSubcategorias.find(s => s.id === filtroSubcategoria);
+                                return sub ? (
+                                  <span
+                                    className="px-2 py-0.5 rounded text-xs font-medium"
+                                    style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                                  >
+                                    {sub.nombre}
+                                  </span>
+                                ) : null;
+                              })()}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__all__">Todas</SelectItem>
+                            {filtroCategoria !== '__all__' ? (
+                              subcategoriasFiltradas.map(sub => (
+                                <SelectItem key={sub.id} value={sub.id}>
+                                  <span
+                                    className="px-2 py-0.5 rounded text-xs font-medium"
+                                    style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                                  >
+                                    {sub.nombre}
+                                  </span>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              categoriasParent.map(parent => {
+                                const hijas = todasSubcategorias.filter(s => s.parent_id === parent.id);
+                                if (hijas.length === 0) return null;
+                                return (
+                                  <SelectGroup key={parent.id} className="mt-2 first:mt-0">
+                                    <SelectLabel className="text-xs text-muted-foreground">{parent.nombre}</SelectLabel>
+                                    {hijas.map(sub => (
+                                      <SelectItem key={sub.id} value={sub.id}>
+                                        <span
+                                          className="px-2 py-0.5 rounded text-xs font-medium"
+                                          style={{ backgroundColor: `${sub.color}25`, color: sub.color, filter: 'brightness(0.85)' }}
+                                        >
+                                          {sub.nombre}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectGroup>
+                                );
+                              })
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

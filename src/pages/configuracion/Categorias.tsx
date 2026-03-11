@@ -26,12 +26,11 @@ import {
   Trash2,
   Tags,
   Loader2,
-  ArrowLeft,
   ChevronRight,
   ChevronDown
 } from 'lucide-react';
 import { Categoria, CategoriaConHijos, CategoriaTipo } from '@/types/database';
-import { Link } from 'react-router-dom';
+import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 
 export default function ConfigCategorias() {
   const { user } = useAuth();
@@ -243,7 +242,7 @@ export default function ConfigCategorias() {
           style={{ marginLeft: `${level * 24}px` }}
           onClick={() => handleEdit(categoria)}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {hasChildren ? (
               <button
                 onClick={(e) => { e.stopPropagation(); toggleExpanded(categoria.id); }}
@@ -262,13 +261,13 @@ export default function ConfigCategorias() {
               className="w-4 h-4 rounded-full"
               style={{ backgroundColor: categoria.color }}
             />
-            <span className="font-medium">
+            <span className="font-medium truncate">
               {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
               {categoria.nombre}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             {level === 0 && (
               <Button
                 variant="ghost"
@@ -302,23 +301,16 @@ export default function ConfigCategorias() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link to="/configuracion">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Gestión de Categorías</h1>
-          </div>
+        <div className="space-y-4 md:space-y-6">
+          <MobileSubpageHeader title="Gestión de Categorías" backHref="/configuracion" />
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-muted"><Tags className="h-4 w-4 text-muted-foreground" /></div>
                 Categorías
               </CardTitle>
-              <Button onClick={() => handleCreate()}>
+              <Button onClick={() => handleCreate()} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Nueva Categoría
               </Button>

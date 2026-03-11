@@ -113,14 +113,14 @@ export function GastoRecurrenteForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Alquiler" {...field} />
+                <Input placeholder="Ej: Alquiler" autoFocus={!initialData} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-[1fr_auto] gap-4">
           <FormField
             control={form.control}
             name="cantidad"
@@ -151,7 +151,7 @@ export function GastoRecurrenteForm({
             control={form.control}
             name="dia_del_mes"
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="w-28">
                 <FormLabel>Día del mes</FormLabel>
                 <FormControl>
                   <Input

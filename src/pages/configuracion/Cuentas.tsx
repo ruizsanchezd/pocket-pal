@@ -5,7 +5,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -14,22 +13,27 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { CuentaForm } from '@/components/configuracion/CuentaForm';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useWebHaptics } from 'web-haptics/react';
 import {
   Plus,
-  Pencil,
   Star,
   Wallet,
   Loader2,
-  ArrowLeft,
-  ChevronUp,
-  ChevronDown,
-  Trash2
+  Trash2,
+  Eye,
+  EyeOff,
+  MoreHorizontal
 } from 'lucide-react';
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { Link } from 'react-router-dom';
+import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 import { format } from 'date-fns';
 
 interface CuentaConConfig extends Cuenta {
@@ -339,25 +343,6 @@ export default function ConfigCuentas() {
     toast({ title: 'Cuenta predeterminada actualizada' });
   };
 
-  const handleReorder = async (cuenta: CuentaConConfig, direction: 'up' | 'down') => {
-    const currentIndex = cuentas.findIndex(c => c.id === cuenta.id);
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    
-    if (newIndex < 0 || newIndex >= cuentas.length) return;
-
-    const newCuentas = [...cuentas];
-    [newCuentas[currentIndex], newCuentas[newIndex]] = [newCuentas[newIndex], newCuentas[currentIndex]];
-
-    // Update orden for both accounts
-    await Promise.all([
-      supabase.from('cuentas').update({ orden: newIndex }).eq('id', cuenta.id),
-      supabase.from('cuentas').update({ orden: currentIndex }).eq('id', newCuentas[currentIndex].id)
-    ]);
-
-    haptic.trigger('light');
-    setCuentas(newCuentas);
-  };
-
   const handleDelete = async (cuenta: CuentaConConfig) => {
     if (!user) return;
 
@@ -413,7 +398,7 @@ export default function ConfigCuentas() {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-        {accounts.map((cuenta, index) => (
+        {accounts.map((cuenta) => (
           <div
             key={cuenta.id}
             className={cn(
@@ -421,8 +406,8 @@ export default function ConfigCuentas() {
               !cuenta.activa && "opacity-50"
             )}
           >
-            <div className="flex items-center gap-3">
-              <div 
+            <div className="flex items-center gap-3 cursor-pointer" onClick={() => handleEdit(cuenta)}>
+              <div
                 className="w-4 h-4 rounded-full"
                 style={{ backgroundColor: cuenta.color }}
               />
@@ -442,6 +427,11 @@ export default function ConfigCuentas() {
                       {formatCurrency(cuenta.saldo_actual, cuenta.divisa)}
                     </span>
                   )}
+                  {cuenta.tipo === 'inversion' && cuenta.capital_inicial_invertido > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      Inv: {formatCurrency(cuenta.capital_inicial_invertido, cuenta.divisa)}
+                    </span>
+                  )}
                   {cuenta.tipo === 'monedero' && cuenta.monedero_config && (
                     <span className="text-xs text-muted-foreground">
                       Recarga: {cuenta.monedero_config.recarga_mensual}€/mes
@@ -451,61 +441,30 @@ export default function ConfigCuentas() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  disabled={index === 0}
-                  onClick={() => handleReorder(cuenta, 'up')}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="p-1 rounded hover:bg-muted outline-none shrink-0">
+                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleToggleActive(cuenta)} className="py-2.5 px-4">
+                  {cuenta.activa ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                  {cuenta.activa ? "Ocultar" : "Mostrar"}
+                </DropdownMenuItem>
+                {profile?.cuenta_default_id !== cuenta.id && cuenta.activa && (
+                  <DropdownMenuItem onClick={() => handleSetDefault(cuenta)} className="py-2.5 px-4">
+                    <Star className="h-4 w-4 mr-2" />
+                    Hacer favorita
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => setDeleteConfirm(cuenta)}
+                  className="py-2.5 px-4 text-destructive focus:text-destructive"
                 >
-                  <ChevronUp className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  disabled={index === accounts.length - 1}
-                  onClick={() => handleReorder(cuenta, 'down')}
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </Button>
-              </div>
-              
-              <Switch
-                checked={cuenta.activa}
-                onCheckedChange={() => handleToggleActive(cuenta)}
-              />
-              
-              {profile?.cuenta_default_id !== cuenta.id && cuenta.activa && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleSetDefault(cuenta)}
-                  title="Establecer como predeterminada"
-                >
-                  <Star className="h-4 w-4" />
-                </Button>
-              )}
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleEdit(cuenta)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteConfirm(cuenta)}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ))}
       </div>
@@ -515,23 +474,16 @@ export default function ConfigCuentas() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link to="/configuracion">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Gestión de Cuentas</h1>
-          </div>
+        <div className="space-y-4 md:space-y-6">
+          <MobileSubpageHeader title="Gestión de Cuentas" backHref="/configuracion" />
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-muted"><Wallet className="h-4 w-4 text-muted-foreground" /></div>
                 Mis Cuentas
               </CardTitle>
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Nueva Cuenta
               </Button>

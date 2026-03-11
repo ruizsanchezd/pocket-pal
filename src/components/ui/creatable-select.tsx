@@ -207,7 +207,7 @@ export function CreatableSelect({
           style={{
             height: isExpanded ? '100dvh' : '85dvh',
             maxHeight: isExpanded ? '100dvh' : '85dvh',
-            transition: isInlineCreating ? 'none' : 'height 300ms ease-in-out, max-height 300ms ease-in-out, border-top-left-radius 300ms ease-in-out, border-top-right-radius 300ms ease-in-out',
+            transition: isInlineCreating ? 'none' : 'height 180ms ease-in-out, max-height 180ms ease-in-out, border-top-left-radius 180ms ease-in-out, border-top-right-radius 180ms ease-in-out',
           }}
         >
           <DrawerHeader>

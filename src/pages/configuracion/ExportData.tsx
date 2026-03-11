@@ -9,9 +9,9 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Download, FileArchive, Loader2, ArrowLeft, Calendar } from 'lucide-react';
+import { Download, FileArchive, Loader2, Calendar } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Link } from 'react-router-dom';
+import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 import { 
   downloadFile, 
   generateMovimientosCSV, 
@@ -189,15 +189,8 @@ export default function ExportData() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
-            <Link to="/configuracion">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold">Exportar Datos</h1>
-          </div>
+        <div className="space-y-4 md:space-y-6">
+          <MobileSubpageHeader title="Exportar Datos" backHref="/configuracion" />
 
           <div className="grid gap-4 md:grid-cols-2">
             <Card>

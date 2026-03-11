@@ -39,6 +39,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const { user, profile, signOut } = useAuth();
   const location = useLocation();
   const [signOutConfirm, setSignOutConfirm] = useState(false);
+  const isConfigSubpage = location.pathname.startsWith('/configuracion/');
 
   const handleSignOut = async () => {
     await signOut();
@@ -63,7 +64,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className={cn("sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60", isConfigSubpage && "hidden md:block")}>
         <div className="container relative flex h-14 items-center">
           {/* Logo */}
           <Link to="/movimientos" className="flex items-center gap-2 mr-8">

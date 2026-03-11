@@ -82,7 +82,7 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
             <FormItem>
               <FormLabel>Nombre *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Caixa Principal" {...field} />
+                <Input placeholder="Ej: Caixa Principal" autoFocus={!initialData} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

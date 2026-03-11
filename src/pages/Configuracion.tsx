@@ -9,10 +9,10 @@ export default function Configuracion() {
   return (
     <ProtectedRoute>
       <MainLayout>
-        <div className="space-y-6">
-          <h1 className="text-xl font-bold md:text-2xl">Configuración</h1>
+        <div className="space-y-4 md:space-y-6">
+          <h1 className="text-2xl font-semibold">Configuración</h1>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             {/* Left: configurable sections */}
             <div className="grid gap-4 content-start">
               <Link to="/configuracion/cuentas">
@@ -48,10 +48,10 @@ export default function Configuracion() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <div className="p-1.5 rounded-md bg-muted"><CreditCard className="h-4 w-4 text-muted-foreground" /></div>
-                      Gastos Recurrentes
+                      Movimientos Recurrentes
                     </CardTitle>
                     <CardDescription>
-                      Configura tus gastos que se repiten cada mes
+                      Gestiona tus ingresos y gastos que se repiten periódicamente
                     </CardDescription>
                   </CardHeader>
                 </Card>
