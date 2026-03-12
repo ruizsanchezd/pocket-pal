@@ -61,7 +61,6 @@ export function CategoriaDetalleSheet({
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [drawerExpanded, setDrawerExpanded] = useState(false);
-  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchStartY = useRef(0);
   const scrollTopAtTouchStart = useRef(0);
 
@@ -81,13 +80,6 @@ export function CategoriaDetalleSheet({
     }
   };
 
-  const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (!drawerExpanded) return;
-    clearTimeout(collapseTimer.current);
-    if (e.currentTarget.scrollTop === 0) {
-      collapseTimer.current = setTimeout(() => setDrawerExpanded(false), 150);
-    }
-  };
 
   useEffect(() => {
     setSubcategorias(categoria?.children ?? []);
@@ -290,7 +282,6 @@ export function CategoriaDetalleSheet({
                   data-vaul-no-drag
                   onTouchStart={handleContentTouchStart}
                   onTouchMove={handleContentTouchMove}
-                  onScroll={handleContentScroll}
                 >
                   {bodyContent}
                 </div>
