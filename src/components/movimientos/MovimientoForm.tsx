@@ -81,11 +81,12 @@ export function MovimientoForm({
   useEffect(() => {
     if (!disableAutoFocus || initialData) return; // solo nuevo movimiento en mobile
     const timer = setTimeout(() => {
-      form.setFocus('concepto');
-      // El teclado ya está abierto (hidden input trick), solo centrar el campo
+      // preventScroll evita que el navegador desplace la ventana (y arrastre el Drawer)
+      const inputEl = document.querySelector<HTMLInputElement>('[name="concepto"]');
+      inputEl?.focus({ preventScroll: true });
+      // Scroll dentro del contenedor del Drawer (su ancestro scrollable más cercano)
       setTimeout(() => {
-        const el = document.activeElement as HTMLElement | null;
-        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        inputEl?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }, 300);
     }, 500);
     return () => clearTimeout(timer);

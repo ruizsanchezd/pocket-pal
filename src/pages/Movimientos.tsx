@@ -1054,10 +1054,10 @@ export default function Movimientos() {
                   }
                 }}
               >
-                <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
+                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
                   <DrawerTitle>{editingMovimiento ? 'Editar movimiento' : 'Nuevo movimiento'}</DrawerTitle>
                 </DrawerHeader>
-                <div ref={swipeDismissMovimiento} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                <div ref={swipeDismissMovimiento} className="flex-1 overflow-y-auto px-6 pt-4 pb-6" data-vaul-no-drag>
                   <MovimientoForm
                     cuentas={cuentas}
                     categorias={categorias}
