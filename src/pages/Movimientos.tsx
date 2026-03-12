@@ -82,6 +82,7 @@ export default function Movimientos() {
   const [drawerSubcategoriaOpen, setDrawerSubcategoriaOpen] = useState(false);
   const [drawerSubcategoriaExpanded, setDrawerSubcategoriaExpanded] = useState(false);
   const collapseTimerSubcategoria = useRef<ReturnType<typeof setTimeout>>();
+  const hiddenInputRef = useRef<HTMLInputElement>(null);
 
   const handleScrollCategoria = (e: React.UIEvent<HTMLDivElement>) => {
     if (e.currentTarget.scrollTop > 0) {
@@ -529,6 +530,14 @@ export default function Movimientos() {
 
   return (
     <ProtectedRoute>
+      {/* Input oculto para mantener el contexto de teclado iOS durante la animación del Drawer */}
+      <input
+        ref={hiddenInputRef}
+        type="text"
+        aria-hidden="true"
+        tabIndex={-1}
+        style={{ position: 'fixed', top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+      />
       <MainLayout>
         <div className="space-y-3 sm:space-y-6 pb-24 sm:pb-0">
           {/* Header */}
@@ -1035,7 +1044,16 @@ export default function Movimientos() {
           {/* Create/Edit Modal */}
           {isMobile ? (
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false} repositionInputs={false}>
-              <DrawerContent className="flex flex-col" style={{ height: '95dvh', maxHeight: '95dvh' }}>
+              <DrawerContent
+                className="flex flex-col"
+                style={{ height: '95svh', maxHeight: '95svh' }}
+                onOpenAutoFocus={(e) => {
+                  e.preventDefault();
+                  if (!editingMovimiento) {
+                    hiddenInputRef.current?.focus({ preventScroll: true });
+                  }
+                }}
+              >
                 <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
                   <DrawerTitle>{editingMovimiento ? 'Editar movimiento' : 'Nuevo movimiento'}</DrawerTitle>
                 </DrawerHeader>

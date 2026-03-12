@@ -82,14 +82,11 @@ export function MovimientoForm({
     if (!disableAutoFocus || initialData) return; // solo nuevo movimiento en mobile
     const timer = setTimeout(() => {
       form.setFocus('concepto');
-      const onViewportResize = () => {
-        window.visualViewport?.removeEventListener('resize', onViewportResize);
-        setTimeout(() => {
-          const el = document.activeElement as HTMLElement | null;
-          el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }, 50);
-      };
-      window.visualViewport?.addEventListener('resize', onViewportResize);
+      // El teclado ya está abierto (hidden input trick), solo centrar el campo
+      setTimeout(() => {
+        const el = document.activeElement as HTMLElement | null;
+        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 300);
     }, 500);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
