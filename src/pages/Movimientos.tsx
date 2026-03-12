@@ -1045,8 +1045,7 @@ export default function Movimientos() {
           {isMobile ? (
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false} repositionInputs={false}>
               <DrawerContent
-                className="flex flex-col"
-                style={{ height: '85svh', maxHeight: '85svh' }}
+                className="flex flex-col max-h-none"
                 onOpenAutoFocus={(e) => {
                   e.preventDefault();
                   if (!editingMovimiento) {
