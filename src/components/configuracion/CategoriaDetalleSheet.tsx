@@ -69,18 +69,20 @@ export function CategoriaDetalleSheet({
   };
 
   const handleContentTouchMove = (e: React.TouchEvent) => {
-    if (drawerExpanded) return;
-    if (Math.abs(touchStartY.current - e.touches[0].clientY) > 10) {
+    const delta = touchStartY.current - e.touches[0].clientY; // positivo = dedo sube
+    if (!drawerExpanded && delta > 10) {
       setDrawerExpanded(true);
+    } else if (drawerExpanded && delta < -10 && (e.currentTarget as HTMLDivElement).scrollTop === 0) {
+      clearTimeout(collapseTimer.current);
+      setDrawerExpanded(false);
     }
   };
 
   const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (!drawerExpanded) return;
+    clearTimeout(collapseTimer.current);
     if (e.currentTarget.scrollTop === 0) {
       collapseTimer.current = setTimeout(() => setDrawerExpanded(false), 150);
-    } else {
-      clearTimeout(collapseTimer.current);
     }
   };
 
