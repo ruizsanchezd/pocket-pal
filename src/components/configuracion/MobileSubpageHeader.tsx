@@ -44,7 +44,7 @@ export function MobileSubpageHeader({ title, backHref }: MobileSubpageHeaderProp
 
       {/* Inline header — back arrow + title */}
       <div ref={titleRef} className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={() => navigate(backHref)} className="-ml-2 h-11 w-11">
+        <Button variant="ghost" size="icon" onClick={() => navigate(backHref)} className="h-11 w-11">
           <ArrowLeft className="h-6 w-6" />
         </Button>
         <h1 className="text-2xl font-semibold">{title}</h1>

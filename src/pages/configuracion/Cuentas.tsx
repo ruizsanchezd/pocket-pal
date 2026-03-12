@@ -479,14 +479,14 @@ export default function ConfigCuentas() {
           <MobileSubpageHeader title="Gestión de Cuentas" backHref="/configuracion" />
 
           <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-muted"><Wallet className="h-4 w-4 text-muted-foreground" /></div>
                 Mis Cuentas
               </CardTitle>
-              <Button onClick={handleCreate} className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Cuenta
+              <Button onClick={handleCreate} className="shrink-0 h-7 w-7 p-0 sm:h-9 sm:w-auto sm:px-4">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nueva Cuenta</span>
               </Button>
             </CardHeader>
             <CardContent>

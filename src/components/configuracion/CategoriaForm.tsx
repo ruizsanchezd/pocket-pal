@@ -22,6 +22,8 @@ interface CategoriaFormProps {
   isSubcategoria?: boolean;
   onSubmit: (data: CategoriaFormData) => Promise<void>;
   onCancel: () => void;
+  id?: string;
+  hideActions?: boolean;
 }
 
 const COLORS = [
@@ -43,12 +45,14 @@ const COLORS = [
   '#92400E', '#78350F', '#A16207',
 ];
 
-export function CategoriaForm({ 
-  initialData, 
+export function CategoriaForm({
+  initialData,
   tipo,
   isSubcategoria = false,
-  onSubmit, 
-  onCancel 
+  onSubmit,
+  onCancel,
+  id,
+  hideActions = false,
 }: CategoriaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const haptic = useWebHaptics();
@@ -75,7 +79,7 @@ export function CategoriaForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form id={id} onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="nombre"
@@ -121,15 +125,17 @@ export function CategoriaForm({
           )}
         />
 
-        <div className="flex justify-end gap-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Guardar
-          </Button>
-        </div>
+        {!hideActions && (
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar
+            </Button>
+          </div>
+        )}
       </form>
     </Form>
   );

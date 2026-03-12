@@ -15,54 +15,54 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from '@/components/ui/collapsible';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
+import { CategoriaDetalleSheet } from '@/components/configuracion/CategoriaDetalleSheet';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus,
   Trash2,
   Tags,
   Loader2,
-  ChevronRight,
-  ChevronDown
+  MoreHorizontal,
 } from 'lucide-react';
-import { Categoria, CategoriaConHijos, CategoriaTipo } from '@/types/database';
+import { Categoria, CategoriaConHijos, CategoriaFormData, CategoriaTipo } from '@/types/database';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 
 export default function ConfigCategorias() {
   const { user } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
-  
+
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<Categoria | null>(null);
-  const [parentCategoria, setParentCategoria] = useState<Categoria | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Categoria | null>(null);
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<CategoriaTipo>('gasto');
+  const [selectedCategoria, setSelectedCategoria] = useState<CategoriaConHijos | null>(null);
 
   // Fetch categories
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchCategorias = async () => {
       setLoading(true);
-      
+
       const { data } = await supabase
         .from('categorias')
         .select('*')
         .eq('user_id', user.id)
         .order('orden');
-      
+
       if (data) {
         setCategorias(data as Categoria[]);
       }
-      
+
       setLoading(false);
     };
 
@@ -73,7 +73,7 @@ export default function ConfigCategorias() {
   const categoriaTree = useMemo(() => {
     const filtered = categorias.filter(c => c.tipo === activeTab);
     const rootCategorias = filtered.filter(c => !c.parent_id);
-    
+
     const buildTree = (parent: Categoria): CategoriaConHijos => {
       const children = filtered.filter(c => c.parent_id === parent.id);
       return {
@@ -85,95 +85,43 @@ export default function ConfigCategorias() {
     return rootCategorias.map(buildTree);
   }, [categorias, activeTab]);
 
-  const toggleExpanded = (id: string) => {
-    const newExpanded = new Set(expandedIds);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedIds(newExpanded);
-  };
+  // Keep sheetCategoria fresh from tree
+  const sheetCategoria = useMemo(
+    () => categoriaTree.find(c => c.id === selectedCategoria?.id) ?? null,
+    [categoriaTree, selectedCategoria]
+  );
 
-  const handleCreate = (parent?: Categoria) => {
+  const handleCreate = () => {
     setEditingCategoria(null);
-    setParentCategoria(parent || null);
     setModalOpen(true);
   };
 
-  const handleEdit = (categoria: Categoria) => {
-    setEditingCategoria(categoria);
-    setParentCategoria(null);
-    setModalOpen(true);
-  };
-
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: CategoriaFormData) => {
     if (!user) return;
 
     try {
-      if (editingCategoria) {
-        // Update category
-        const { error } = await supabase
-          .from('categorias')
-          .update({
-            nombre: data.nombre,
-            color: data.color,
-            icono: null
-          })
-          .eq('id', editingCategoria.id);
+      const { data: newCategoria, error } = await supabase
+        .from('categorias')
+        .insert({
+          user_id: user.id,
+          nombre: data.nombre,
+          tipo: activeTab,
+          parent_id: null,
+          color: data.color,
+          icono: null,
+          orden: categorias.filter(c => c.tipo === activeTab).length
+        })
+        .select()
+        .single();
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setCategorias(categorias.map(c =>
-          c.id === editingCategoria.id
-            ? { ...c, nombre: data.nombre, color: data.color, icono: null }
-            : c
-        ));
-
-        haptic.trigger('success');
-        toast({ title: 'Categoría actualizada' });
-      } else {
-        // Create category
-        const tipo = parentCategoria?.tipo || activeTab;
-
-        // Guard: prevent sub-subcategories
-        if (parentCategoria?.parent_id) {
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'No se permiten subcategorías anidadas'
-          });
-          return;
-        }
-
-        const { data: newCategoria, error } = await supabase
-          .from('categorias')
-          .insert({
-            user_id: user.id,
-            nombre: data.nombre,
-            tipo,
-            parent_id: parentCategoria?.id || null,
-            color: data.color,
-            icono: null,
-            orden: categorias.filter(c => c.tipo === tipo).length
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-
-        setCategorias([...categorias, newCategoria as Categoria]);
-        haptic.trigger('success');
-        toast({ title: 'Categoría creada' });
-      }
-
+      setCategorias([...categorias, newCategoria as Categoria]);
+      haptic.trigger('success');
+      toast({ title: 'Categoría creada' });
       setModalOpen(false);
-      setEditingCategoria(null);
-      setParentCategoria(null);
     } catch (error) {
-      if (import.meta.env.DEV) {
-        console.error('Error saving categoria:', error);
-      }
+      if (import.meta.env.DEV) console.error('Error saving categoria:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -182,8 +130,33 @@ export default function ConfigCategorias() {
     }
   };
 
+  const handleUpdateCategoria = async (id: string, data: CategoriaFormData) => {
+    const { error } = await supabase
+      .from('categorias')
+      .update({ nombre: data.nombre, color: data.color, icono: null })
+      .eq('id', id);
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar la categoría' });
+      throw error;
+    }
+
+    setCategorias(categorias.map(c =>
+      c.id === id ? { ...c, nombre: data.nombre, color: data.color, icono: null } : c
+    ));
+    haptic.trigger('success');
+    toast({ title: 'Categoría actualizada' });
+  };
+
+  const handleSubcategoriasChange = (parentId: string, updatedSubcats: Categoria[]) => {
+    setCategorias(prev => [
+      ...prev.filter(c => c.parent_id !== parentId && c.id !== parentId),
+      prev.find(c => c.id === parentId)!,
+      ...updatedSubcats
+    ]);
+  };
+
   const handleDelete = async (categoria: Categoria) => {
-    // Check for movements using this category
     const { count } = await supabase
       .from('movimientos')
       .select('*', { count: 'exact', head: true })
@@ -199,7 +172,6 @@ export default function ConfigCategorias() {
       return;
     }
 
-    // Check for subcategories
     const subcategorias = categorias.filter(c => c.parent_id === categoria.id);
     if (subcategorias.length > 0) {
       toast({
@@ -217,11 +189,7 @@ export default function ConfigCategorias() {
       .eq('id', categoria.id);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo eliminar la categoría'
-      });
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar la categoría' });
     } else {
       haptic.trigger('success');
       setCategorias(categorias.filter(c => c.id !== categoria.id));
@@ -231,72 +199,44 @@ export default function ConfigCategorias() {
     setDeleteConfirm(null);
   };
 
-  const renderCategoria = (categoria: CategoriaConHijos, level: number = 0) => {
-    const hasChildren = categoria.children && categoria.children.length > 0;
-    const isExpanded = expandedIds.has(categoria.id);
-
-    return (
-      <div key={categoria.id} className="space-y-2">
-        <div
-          className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
-          style={{ marginLeft: `${level * 24}px` }}
-          onClick={() => handleEdit(categoria)}
-        >
-          <div className="flex items-center gap-3 flex-1">
-            {hasChildren ? (
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleExpanded(categoria.id); }}
-                className="p-1 hover:bg-muted rounded"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </button>
-            ) : (
-              <div className="w-6" />
-            )}
-            <div
-              className="w-4 h-4 rounded-full"
-              style={{ backgroundColor: categoria.color }}
-            />
-            <span className="font-medium">
-              {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
-              {categoria.nombre}
+  const renderCategoria = (categoria: CategoriaConHijos) => (
+    <div
+      key={categoria.id}
+      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+      onClick={() => setSelectedCategoria(categoria)}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: categoria.color }} />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 min-w-0">
+          <span className="font-medium truncate">
+            {categoria.icono && <span className="mr-1">{categoria.icono}</span>}
+            {categoria.nombre}
+          </span>
+          {(categoria.children?.length ?? 0) > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {categoria.children!.length} subcategorías
             </span>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0">
-            {level === 0 && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => { e.stopPropagation(); handleCreate(categoria); }}
-                title="Añadir subcategoría"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={(e) => { e.stopPropagation(); setDeleteConfirm(categoria); }}
-              className="text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
-
-        {hasChildren && isExpanded && (
-          <div className="space-y-2">
-            {categoria.children!.map(child => renderCategoria(child, level + 1))}
-          </div>
-        )}
       </div>
-    );
-  };
+      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="p-1 rounded hover:bg-muted outline-none">
+            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => setDeleteConfirm(categoria)}
+              className="py-2.5 px-4 text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
 
   return (
     <ProtectedRoute>
@@ -305,22 +245,22 @@ export default function ConfigCategorias() {
           <MobileSubpageHeader title="Gestión de Categorías" backHref="/configuracion" />
 
           <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center gap-2">
                 <div className="p-1.5 rounded-md bg-muted"><Tags className="h-4 w-4 text-muted-foreground" /></div>
                 Categorías
               </CardTitle>
-              <Button onClick={() => handleCreate()} className="w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Nueva Categoría
+              <Button onClick={handleCreate} className="shrink-0 h-7 w-7 p-0 sm:h-9 sm:w-auto sm:px-4">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Nueva Categoría</span>
               </Button>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={(v) => { haptic.trigger('selection'); setActiveTab(v as CategoriaTipo); }}>
-                <TabsList className="mb-4">
-                  <TabsTrigger value="gasto">Gastos</TabsTrigger>
-                  <TabsTrigger value="ingreso">Ingresos</TabsTrigger>
-                  <TabsTrigger value="inversion">Inversiones</TabsTrigger>
+                <TabsList className="mb-4 w-full sm:w-auto">
+                  <TabsTrigger value="gasto" className="flex-1 sm:flex-none">Gastos</TabsTrigger>
+                  <TabsTrigger value="ingreso" className="flex-1 sm:flex-none">Ingresos</TabsTrigger>
+                  <TabsTrigger value="inversion" className="flex-1 sm:flex-none">Inversiones</TabsTrigger>
                 </TabsList>
 
                 {loading ? (
@@ -334,7 +274,7 @@ export default function ConfigCategorias() {
                     <p className="text-muted-foreground mb-4">
                       Añade tu primera categoría
                     </p>
-                    <Button onClick={() => handleCreate()}>
+                    <Button onClick={handleCreate}>
                       <Plus className="mr-2 h-4 w-4" />
                       Añadir categoría
                     </Button>
@@ -348,25 +288,23 @@ export default function ConfigCategorias() {
             </CardContent>
           </Card>
 
-          {/* Create/Edit Modal */}
+          <CategoriaDetalleSheet
+            categoria={sheetCategoria}
+            onUpdateCategoria={handleUpdateCategoria}
+            onSubcategoriasChange={handleSubcategoriasChange}
+            onClose={() => setSelectedCategoria(null)}
+            userId={user!.id}
+          />
+
+          {/* Create Modal */}
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>
             <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
               <DialogHeader>
-                <DialogTitle>
-                  {editingCategoria ? 'Editar Categoría' : 
-                   parentCategoria ? `Nueva Subcategoría de ${parentCategoria.nombre}` :
-                   'Nueva Categoría'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingCategoria 
-                    ? 'Modifica los datos de la categoría' 
-                    : 'Añade una nueva categoría'}
-                </DialogDescription>
+                <DialogTitle>Nueva Categoría</DialogTitle>
+                <DialogDescription>Añade una nueva categoría</DialogDescription>
               </DialogHeader>
               <CategoriaForm
-                initialData={editingCategoria || undefined}
-                tipo={parentCategoria?.tipo || activeTab}
-                isSubcategoria={!!parentCategoria}
+                tipo={activeTab}
                 onSubmit={handleSave}
                 onCancel={() => setModalOpen(false)}
               />
@@ -386,8 +324,8 @@ export default function ConfigCategorias() {
                 <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
                   Cancelar
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
                 >
                   Eliminar
