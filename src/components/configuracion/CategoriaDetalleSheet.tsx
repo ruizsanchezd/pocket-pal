@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -60,17 +60,7 @@ export function CategoriaDetalleSheet({
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [drawerExpanded, setDrawerExpanded] = useState(false);
-  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
-
-  const handleScrollDrawer = (e: React.UIEvent<HTMLDivElement>) => {
-    if (e.currentTarget.scrollTop > 0) {
-      clearTimeout(collapseTimer.current);
-      setDrawerExpanded(true);
-    } else {
-      collapseTimer.current = setTimeout(() => setDrawerExpanded(false), 80);
-    }
-  };
+  const [activeSnapPoint, setActiveSnapPoint] = useState<number | string | null>(0.85);
 
   useEffect(() => {
     setSubcategorias(categoria?.children ?? []);
@@ -251,15 +241,15 @@ export function CategoriaDetalleSheet({
   return (
     <>
       {isMobile ? (
-        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) { onClose(); setDrawerExpanded(false); } }} shouldScaleBackground={false}>
-          <DrawerContent
-            className={cn("flex flex-col", drawerExpanded && "rounded-t-none")}
-            style={{
-              height: drawerExpanded ? '100dvh' : '85dvh',
-              maxHeight: drawerExpanded ? '100dvh' : '85dvh',
-              transition: 'height 180ms ease-in-out, max-height 180ms ease-in-out, border-top-left-radius 180ms ease-in-out, border-top-right-radius 180ms ease-in-out',
-            }}
-          >
+        <Drawer
+          open={!!categoria}
+          onOpenChange={(open) => { if (!open) { onClose(); setActiveSnapPoint(0.85); } }}
+          shouldScaleBackground={false}
+          snapPoints={[0.85, 1]}
+          activeSnapPoint={activeSnapPoint}
+          setActiveSnapPoint={setActiveSnapPoint}
+        >
+          <DrawerContent className={cn("flex flex-col max-h-[100dvh]", activeSnapPoint === 1 && "rounded-t-none")}>
             {categoria && (
               <>
                 <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
@@ -271,7 +261,6 @@ export function CategoriaDetalleSheet({
                 <div
                   className="flex-1 overflow-y-auto px-6 pb-4 flex flex-col gap-6"
                   data-vaul-no-drag
-                  onScroll={handleScrollDrawer}
                 >
                   {bodyContent}
                 </div>
