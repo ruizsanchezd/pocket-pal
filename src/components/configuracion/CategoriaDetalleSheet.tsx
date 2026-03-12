@@ -63,16 +63,19 @@ export function CategoriaDetalleSheet({
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
   const touchStartY = useRef(0);
+  const scrollTopAtTouchStart = useRef(0);
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
+    scrollTopAtTouchStart.current = (e.currentTarget as HTMLDivElement).scrollTop;
   };
 
   const handleContentTouchMove = (e: React.TouchEvent) => {
     const delta = touchStartY.current - e.touches[0].clientY; // positivo = dedo sube
     if (!drawerExpanded && delta > 10) {
       setDrawerExpanded(true);
-    } else if (drawerExpanded && delta < -10 && (e.currentTarget as HTMLDivElement).scrollTop === 0) {
+    } else if (drawerExpanded && delta < -10 && scrollTopAtTouchStart.current === 0) {
+      // Solo colapsa si el gesto empezó en el top, no si venía de scrollear contenido
       clearTimeout(collapseTimer.current);
       setDrawerExpanded(false);
     }
