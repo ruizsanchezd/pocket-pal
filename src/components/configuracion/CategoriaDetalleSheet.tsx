@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Categoria, CategoriaConHijos, CategoriaFormData } from '@/types/database';
 
 const EDIT_FORM_ID = 'categoria-edit-form';
@@ -60,7 +59,6 @@ export function CategoriaDetalleSheet({
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSnapPoint, setActiveSnapPoint] = useState<number | string | null>(0.85);
 
   useEffect(() => {
     setSubcategorias(categoria?.children ?? []);
@@ -241,15 +239,8 @@ export function CategoriaDetalleSheet({
   return (
     <>
       {isMobile ? (
-        <Drawer
-          open={!!categoria}
-          onOpenChange={(open) => { if (!open) { onClose(); setActiveSnapPoint(0.85); } }}
-          shouldScaleBackground={false}
-          snapPoints={[0.85, 1]}
-          activeSnapPoint={activeSnapPoint}
-          setActiveSnapPoint={setActiveSnapPoint}
-        >
-          <DrawerContent className={cn("flex flex-col max-h-[100dvh]", activeSnapPoint === 1 && "rounded-t-none")}>
+        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) onClose(); }} shouldScaleBackground={false}>
+          <DrawerContent className="flex flex-col max-h-[92dvh]">
             {categoria && (
               <>
                 <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
