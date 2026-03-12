@@ -28,7 +28,7 @@ import {
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Cuenta, Categoria, MovimientoConRelaciones } from '@/types/database';
 import { cn } from '@/lib/utils';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,6 +77,22 @@ export function MovimientoForm({
       subcategoria_id: initialData?.subcategoria_id || undefined
     }
   });
+
+  useEffect(() => {
+    if (!disableAutoFocus || initialData) return; // solo nuevo movimiento en mobile
+    const timer = setTimeout(() => {
+      form.setFocus('concepto');
+      const onViewportResize = () => {
+        window.visualViewport?.removeEventListener('resize', onViewportResize);
+        setTimeout(() => {
+          const el = document.activeElement as HTMLElement | null;
+          el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 50);
+      };
+      window.visualViewport?.addEventListener('resize', onViewportResize);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const cantidad = form.watch('cantidad');
   const categoriaId = form.watch('categoria_id');

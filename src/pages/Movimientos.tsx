@@ -1034,7 +1034,7 @@ export default function Movimientos() {
 
           {/* Create/Edit Modal */}
           {isMobile ? (
-            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false} repositionInputs={false}>
               <DrawerContent className="flex flex-col" style={{ height: '95dvh', maxHeight: '95dvh' }}>
                 <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
                   <DrawerTitle>{editingMovimiento ? 'Editar movimiento' : 'Nuevo movimiento'}</DrawerTitle>
