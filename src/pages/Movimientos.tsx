@@ -287,6 +287,7 @@ export default function Movimientos() {
       subcategoria_id: movimiento.subcategoria_id,
       mes_referencia: movimiento.mes_referencia,
       notas: movimiento.notas,
+      es_recurrente: movimiento.es_recurrente,
     });
 
     if (error) {
@@ -294,16 +295,23 @@ export default function Movimientos() {
       return;
     }
 
-    // Refetch the current month's movimientos
+    // Refetch using the same pattern as the main fetch
     const { data: refreshed } = await supabase
       .from('movimientos')
-      .select('*, cuenta:cuentas(id, nombre, tipo), categoria:categorias(id, nombre, color, tipo), subcategoria:categorias!movimientos_subcategoria_id_fkey(id, nombre, color, tipo)')
+      .select('*')
       .eq('user_id', user!.id)
-      .gte('fecha', `${currentMonth}-01`)
-      .lte('fecha', `${currentMonth}-31`)
-      .order('fecha', { ascending: false });
+      .eq('mes_referencia', currentMonth)
+      .order('fecha', { ascending: false })
+      .order('created_at', { ascending: false });
 
-    if (refreshed) setMovimientos(refreshed as MovimientoConRelaciones[]);
+    if (refreshed) {
+      setMovimientos(refreshed.map(m => ({
+        ...m,
+        cuenta: cuentas.find(c => c.id === m.cuenta_id),
+        categoria: categorias.find(c => c.id === m.categoria_id),
+        subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
+      })) as MovimientoConRelaciones[]);
+    }
     toast({ title: 'Movimiento restaurado' });
   };
 
