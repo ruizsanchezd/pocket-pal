@@ -43,6 +43,7 @@ interface MovimientoFormProps {
   onSubmit: (data: MovimientoFormData) => Promise<void>;
   onCancel: () => void;
   onCategoriaCreated?: (categoria: Categoria) => void;
+  disableAutoFocus?: boolean;
 }
 
 export function MovimientoForm({
@@ -52,7 +53,8 @@ export function MovimientoForm({
   initialData,
   onSubmit,
   onCancel,
-  onCategoriaCreated
+  onCategoriaCreated,
+  disableAutoFocus = false,
 }: MovimientoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
@@ -159,7 +161,7 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Compra supermercado" autoFocus={!initialData} {...field} />
+                <Input placeholder="Ej: Compra supermercado" autoFocus={!initialData && !disableAutoFocus} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
