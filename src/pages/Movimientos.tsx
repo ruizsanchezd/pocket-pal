@@ -40,7 +40,9 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MovimientoForm } from '@/components/movimientos/MovimientoForm';
+import { SwipeableRow } from '@/components/movimientos/SwipeableRow';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import {
   ChevronLeft,
@@ -179,7 +181,8 @@ export default function Movimientos() {
         .select('*')
         .eq('user_id', user.id)
         .eq('mes_referencia', currentMonth)
-        .order('fecha', { ascending: true });
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false });
 
       // Map movements if they exist
       const movimientosConRelaciones = movimientosData
@@ -270,6 +273,62 @@ export default function Movimientos() {
       }
     }
     setDeleteConfirm(null);
+  };
+
+  const handleUndoDelete = async (movimiento: MovimientoConRelaciones) => {
+    const { error } = await supabase.from('movimientos').insert({
+      user_id: movimiento.user_id,
+      fecha: movimiento.fecha,
+      concepto: movimiento.concepto,
+      cantidad: movimiento.cantidad,
+      tipo: movimiento.tipo,
+      cuenta_id: movimiento.cuenta_id,
+      categoria_id: movimiento.categoria_id,
+      subcategoria_id: movimiento.subcategoria_id,
+      mes_referencia: movimiento.mes_referencia,
+      notas: movimiento.notas,
+    });
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo restaurar el movimiento' });
+      return;
+    }
+
+    // Refetch the current month's movimientos
+    const { data: refreshed } = await supabase
+      .from('movimientos')
+      .select('*, cuenta:cuentas(id, nombre, tipo), categoria:categorias(id, nombre, color, tipo), subcategoria:categorias!movimientos_subcategoria_id_fkey(id, nombre, color, tipo)')
+      .eq('user_id', user!.id)
+      .gte('fecha', `${currentMonth}-01`)
+      .lte('fecha', `${currentMonth}-31`)
+      .order('fecha', { ascending: false });
+
+    if (refreshed) setMovimientos(refreshed as MovimientoConRelaciones[]);
+    toast({ title: 'Movimiento restaurado' });
+  };
+
+  const handleSwipeDelete = async (movimiento: MovimientoConRelaciones) => {
+    const { error } = await supabase
+      .from('movimientos')
+      .delete()
+      .eq('id', movimiento.id);
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar' });
+      return;
+    }
+
+    setMovimientos(prev => prev.filter(m => m.id !== movimiento.id));
+    haptic.trigger('success');
+
+    toast({
+      title: 'Movimiento eliminado',
+      action: (
+        <ToastAction altText="Deshacer" onClick={() => handleUndoDelete(movimiento)}>
+          Deshacer
+        </ToastAction>
+      ),
+    });
   };
 
   const handleSaveMovimiento = async (data: any) => {
@@ -801,42 +860,47 @@ export default function Movimientos() {
                   {/* Mobile: card list */}
                   <div className="md:hidden divide-y -mx-6">
                     {filteredMovimientos.map((movimiento) => (
-                      <div
+                      <SwipeableRow
                         key={movimiento.id}
-                        className="flex items-center justify-between px-6 py-3 cursor-pointer active:bg-muted/40 transition-colors"
-                        onClick={() => handleEditMovimiento(movimiento)}
+                        onDelete={() => handleSwipeDelete(movimiento)}
+                        onThresholdReached={() => haptic.trigger('warning')}
                       >
-                        <div className="flex-1 min-w-0 pr-3">
-                          <p className="font-medium text-sm truncate">{movimiento.concepto}</p>
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            {movimiento.categoria && (
-                              <span
-                                className="px-1.5 py-0.5 rounded text-xs font-medium"
-                                style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
-                              >
-                                {movimiento.categoria.nombre}
-                              </span>
-                            )}
-                            {movimiento.subcategoria && (
-                              <span
-                                className="px-1.5 py-0.5 rounded text-xs font-medium"
-                                style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
-                              >
-                                {movimiento.subcategoria.nombre}
-                              </span>
-                            )}
-                            {movimiento.es_recurrente && (
-                              <span className="text-xs text-muted-foreground">· Recurrente</span>
-                            )}
+                        <div
+                          className="flex items-center justify-between px-6 py-3 cursor-pointer active:bg-muted/40 transition-colors"
+                          onClick={() => handleEditMovimiento(movimiento)}
+                        >
+                          <div className="flex-1 min-w-0 pr-3">
+                            <p className="font-medium text-sm truncate">{movimiento.concepto}</p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                              {movimiento.categoria && (
+                                <span
+                                  className="px-1.5 py-0.5 rounded text-xs font-medium"
+                                  style={{ backgroundColor: `${movimiento.categoria.color}25`, color: movimiento.categoria.color, filter: 'brightness(0.85)' }}
+                                >
+                                  {movimiento.categoria.nombre}
+                                </span>
+                              )}
+                              {movimiento.subcategoria && (
+                                <span
+                                  className="px-1.5 py-0.5 rounded text-xs font-medium"
+                                  style={{ backgroundColor: `${movimiento.subcategoria.color}25`, color: movimiento.subcategoria.color, filter: 'brightness(0.85)' }}
+                                >
+                                  {movimiento.subcategoria.nombre}
+                                </span>
+                              )}
+                              {movimiento.es_recurrente && (
+                                <span className="text-xs text-muted-foreground">· Recurrente</span>
+                              )}
+                            </div>
                           </div>
+                          <span className={cn(
+                            "font-semibold text-sm shrink-0",
+                            movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
+                          )}>
+                            {formatCurrency(Number(movimiento.cantidad))}
+                          </span>
                         </div>
-                        <span className={cn(
-                          "font-semibold text-sm shrink-0",
-                          movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
-                        )}>
-                          {formatCurrency(Number(movimiento.cantidad))}
-                        </span>
-                      </div>
+                      </SwipeableRow>
                     ))}
                   </div>
                   {/* Desktop: table */}
