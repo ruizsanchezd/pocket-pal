@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Categoria, CategoriaConHijos, CategoriaFormData } from '@/types/database';
 
 const EDIT_FORM_ID = 'categoria-edit-form';
@@ -59,6 +60,17 @@ export function CategoriaDetalleSheet({
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleScrollDrawer = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop > 0) {
+      clearTimeout(collapseTimer.current);
+      setDrawerExpanded(true);
+    } else {
+      collapseTimer.current = setTimeout(() => setDrawerExpanded(false), 80);
+    }
+  };
 
   useEffect(() => {
     setSubcategorias(categoria?.children ?? []);
@@ -239,8 +251,15 @@ export function CategoriaDetalleSheet({
   return (
     <>
       {isMobile ? (
-        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) onClose(); }} shouldScaleBackground={false}>
-          <DrawerContent className="flex flex-col max-h-[92dvh]">
+        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) { onClose(); setDrawerExpanded(false); } }} shouldScaleBackground={false}>
+          <DrawerContent
+            className={cn("flex flex-col", drawerExpanded && "rounded-t-none")}
+            style={{
+              height: drawerExpanded ? '100dvh' : '85dvh',
+              maxHeight: drawerExpanded ? '100dvh' : '85dvh',
+              transition: 'height 200ms ease-out, max-height 200ms ease-out, border-radius 200ms ease-out',
+            }}
+          >
             {categoria && (
               <>
                 <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
@@ -252,6 +271,7 @@ export function CategoriaDetalleSheet({
                 <div
                   className="flex-1 overflow-y-auto px-6 pb-4 flex flex-col gap-6"
                   data-vaul-no-drag
+                  onScroll={handleScrollDrawer}
                 >
                   {bodyContent}
                 </div>
@@ -285,30 +305,54 @@ export function CategoriaDetalleSheet({
         </Sheet>
       )}
 
-      {/* Dialog crear/editar subcategoría */}
-      <Dialog
-        open={subcatModalOpen}
-        onOpenChange={(open) => { if (!open) { setSubcatModalOpen(false); setEditingSubcat(null); } }}
-      >
-        <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</DialogTitle>
-            <DialogDescription>
-              {editingSubcat ? 'Modifica los datos de la subcategoría' : 'Añade una nueva subcategoría'}
-            </DialogDescription>
-          </DialogHeader>
-          {categoria && (
-            <CategoriaForm
-              key={editingSubcat?.id ?? 'new-subcat'}
-              initialData={editingSubcat || undefined}
-              tipo={categoria.tipo}
-              isSubcategoria={true}
-              onSubmit={handleSaveSubcat}
-              onCancel={() => { setSubcatModalOpen(false); setEditingSubcat(null); }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Modal crear/editar subcategoría */}
+      {isMobile ? (
+        <Drawer
+          open={subcatModalOpen}
+          onOpenChange={(open) => { if (!open) { setSubcatModalOpen(false); setEditingSubcat(null); } }}
+        >
+          <DrawerContent className="flex flex-col px-6 pb-6 pt-2">
+            <DrawerHeader className="text-left px-0 pb-4">
+              <DrawerTitle>{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</DrawerTitle>
+            </DrawerHeader>
+            {categoria && (
+              <CategoriaForm
+                key={editingSubcat?.id ?? 'new-subcat'}
+                initialData={editingSubcat || undefined}
+                tipo={categoria.tipo}
+                isSubcategoria={true}
+                autoFocusNombre
+                onSubmit={handleSaveSubcat}
+                onCancel={() => { setSubcatModalOpen(false); setEditingSubcat(null); }}
+              />
+            )}
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Dialog
+          open={subcatModalOpen}
+          onOpenChange={(open) => { if (!open) { setSubcatModalOpen(false); setEditingSubcat(null); } }}
+        >
+          <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</DialogTitle>
+              <DialogDescription>
+                {editingSubcat ? 'Modifica los datos de la subcategoría' : 'Añade una nueva subcategoría'}
+              </DialogDescription>
+            </DialogHeader>
+            {categoria && (
+              <CategoriaForm
+                key={editingSubcat?.id ?? 'new-subcat'}
+                initialData={editingSubcat || undefined}
+                tipo={categoria.tipo}
+                isSubcategoria={true}
+                onSubmit={handleSaveSubcat}
+                onCancel={() => { setSubcatModalOpen(false); setEditingSubcat(null); }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Dialog confirmar borrado subcategoría */}
       <Dialog

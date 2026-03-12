@@ -24,6 +24,7 @@ interface CategoriaFormProps {
   onCancel: () => void;
   id?: string;
   hideActions?: boolean;
+  autoFocusNombre?: boolean;
 }
 
 const COLORS = [
@@ -53,6 +54,7 @@ export function CategoriaForm({
   onCancel,
   id,
   hideActions = false,
+  autoFocusNombre = false,
 }: CategoriaFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const haptic = useWebHaptics();
@@ -89,6 +91,7 @@ export function CategoriaForm({
               <FormControl>
                 <Input
                   placeholder={isSubcategoria ? "Ej: Restaurantes" : "Ej: Alimentación"}
+                  autoFocus={autoFocusNombre}
                   {...field}
                 />
               </FormControl>
