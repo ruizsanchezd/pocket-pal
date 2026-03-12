@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/form';
 import { Loader2 } from 'lucide-react';
 import { Categoria, CategoriaTipo } from '@/types/database';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 
 interface CategoriaFormProps {
@@ -59,6 +59,13 @@ export function CategoriaForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const haptic = useWebHaptics();
 
+  useEffect(() => {
+    if (autoFocusNombre) {
+      const t = setTimeout(() => form.setFocus('nombre'), 150);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
   const form = useForm<CategoriaFormData>({
     resolver: zodResolver(categoriaSchema),
     defaultValues: {
@@ -91,7 +98,6 @@ export function CategoriaForm({
               <FormControl>
                 <Input
                   placeholder={isSubcategoria ? "Ej: Restaurantes" : "Ej: Alimentación"}
-                  autoFocus={autoFocusNombre}
                   {...field}
                 />
               </FormControl>
