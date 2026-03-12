@@ -105,6 +105,7 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        className="bg-background"
         style={{ transform: 'translateX(0px)', touchAction: 'pan-y' }}
       >
         {children}
