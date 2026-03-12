@@ -44,6 +44,7 @@ import { SwipeableRow } from '@/components/movimientos/SwipeableRow';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
 import {
   ChevronLeft,
   ChevronRight,
@@ -99,6 +100,10 @@ export default function Movimientos() {
       collapseTimerSubcategoria.current = setTimeout(() => setDrawerSubcategoriaExpanded(false), 80);
     }
   };
+
+  const swipeDismissCategoria = useSwipeDownToDismiss(() => setDrawerCategoriaOpen(false));
+  const swipeDismissSubcategoria = useSwipeDownToDismiss(() => setDrawerSubcategoriaOpen(false));
+  const swipeDismissMovimiento = useSwipeDownToDismiss(() => setModalOpen(false));
 
   // Format month for display
   const formattedMonth = useMemo(() => {
@@ -627,7 +632,7 @@ export default function Movimientos() {
                             <DrawerHeader>
                               <DrawerTitle>Categoría</DrawerTitle>
                             </DrawerHeader>
-                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollCategoria}>
+                            <div ref={swipeDismissCategoria} className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollCategoria}>
                               <button
                                 className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
                                 onClick={() => { setFiltroCategoria('__all__'); setFiltroSubcategoria('__all__'); setDrawerCategoriaOpen(false); }}
@@ -687,7 +692,7 @@ export default function Movimientos() {
                             <DrawerHeader>
                               <DrawerTitle>Subcategoría</DrawerTitle>
                             </DrawerHeader>
-                            <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollSubcategoria}>
+                            <div ref={swipeDismissSubcategoria} className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleScrollSubcategoria}>
                               <button
                                 className="w-full text-left py-3 px-2 rounded-lg flex items-center gap-3 active:bg-accent"
                                 onClick={() => { setFiltroSubcategoria('__all__'); setDrawerSubcategoriaOpen(false); }}
@@ -1028,29 +1033,50 @@ export default function Movimientos() {
           )}
 
           {/* Create/Edit Modal */}
-          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="sm:max-w-md w-full">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingMovimiento ? 'Editar Movimiento' : 'Nuevo Movimiento'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingMovimiento 
-                    ? 'Modifica los datos del movimiento' 
-                    : 'Añade un nuevo ingreso o gasto'}
-                </DialogDescription>
-              </DialogHeader>
-              <MovimientoForm
-                cuentas={cuentas}
-                categorias={categorias}
-                defaultCuentaId={profile?.cuenta_default_id || undefined}
-                initialData={editingMovimiento || undefined}
-                onSubmit={handleSaveMovimiento}
-                onCancel={() => setModalOpen(false)}
-                onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
-              />
-            </DialogContent>
-          </Dialog>
+          {isMobile ? (
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
+              <DrawerContent className="flex flex-col" style={{ height: '95dvh', maxHeight: '95dvh' }}>
+                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+                  <DrawerTitle>{editingMovimiento ? 'Editar movimiento' : 'Nuevo movimiento'}</DrawerTitle>
+                </DrawerHeader>
+                <div ref={swipeDismissMovimiento} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                  <MovimientoForm
+                    cuentas={cuentas}
+                    categorias={categorias}
+                    defaultCuentaId={profile?.cuenta_default_id || undefined}
+                    initialData={editingMovimiento || undefined}
+                    onSubmit={handleSaveMovimiento}
+                    onCancel={() => setModalOpen(false)}
+                    onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent className="sm:max-w-md w-full">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingMovimiento ? 'Editar Movimiento' : 'Nuevo Movimiento'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingMovimiento
+                      ? 'Modifica los datos del movimiento'
+                      : 'Añade un nuevo ingreso o gasto'}
+                  </DialogDescription>
+                </DialogHeader>
+                <MovimientoForm
+                  cuentas={cuentas}
+                  categorias={categorias}
+                  defaultCuentaId={profile?.cuenta_default_id || undefined}
+                  initialData={editingMovimiento || undefined}
+                  onSubmit={handleSaveMovimiento}
+                  onCancel={() => setModalOpen(false)}
+                  onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete confirmation */}
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

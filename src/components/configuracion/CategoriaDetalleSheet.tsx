@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
 import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -63,6 +64,14 @@ export function CategoriaDetalleSheet({
   const [drawerExpanded, setDrawerExpanded] = useState(false);
   const touchStartY = useRef(0);
   const scrollTopAtTouchStart = useRef(0);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Native-listener refs for swipe-down-to-dismiss (bypass React event delegation)
+  const swipeDismissMain = useSwipeDownToDismiss(onClose);
+  const swipeDismissSubcat = useSwipeDownToDismiss(() => {
+    setSubcatModalOpen(false);
+    setEditingSubcat(null);
+  });
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -77,6 +86,9 @@ export function CategoriaDetalleSheet({
       // Solo colapsa si el gesto empezó en el top, no si venía de scrollear contenido
       clearTimeout(collapseTimer.current);
       setDrawerExpanded(false);
+    } else if (!drawerExpanded && delta < -60 && scrollTopAtTouchStart.current === 0) {
+      // En 85dvh + swipe down desde el top → cerrar drawer
+      onClose();
     }
   };
 
@@ -278,6 +290,7 @@ export function CategoriaDetalleSheet({
                   </DrawerTitle>
                 </DrawerHeader>
                 <div
+                  ref={swipeDismissMain}
                   className="flex-1 overflow-y-auto px-6 pb-4 flex flex-col gap-6"
                   data-vaul-no-drag
                   onTouchStart={handleContentTouchStart}
@@ -327,7 +340,7 @@ export function CategoriaDetalleSheet({
               <DrawerTitle>{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</DrawerTitle>
             </DrawerHeader>
             {categoria && (
-              <div data-vaul-no-drag>
+              <div ref={swipeDismissSubcat} data-vaul-no-drag>
                 <CategoriaForm
                   key={editingSubcat?.id ?? 'new-subcat'}
                   initialData={editingSubcat || undefined}

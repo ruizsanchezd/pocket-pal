@@ -23,6 +23,7 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSwipeDownToDismiss } from "@/hooks/use-drawer-swipe-dismiss";
 
 export interface CreatableSelectProps {
   options: { value: string; label: string; color?: string }[];
@@ -49,6 +50,7 @@ export function CreatableSelect({
 }: CreatableSelectProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
+  const swipeDismissRef = useSwipeDownToDismiss(() => setOpen(false));
   const [isExpanded, setIsExpanded] = React.useState(false);
   const collapseTimer = React.useRef<ReturnType<typeof setTimeout>>();
   const [isInlineCreating, setIsInlineCreating] = React.useState(false);
@@ -213,7 +215,7 @@ export function CreatableSelect({
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
+          <div ref={swipeDismissRef} className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
             {allowNone && (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
