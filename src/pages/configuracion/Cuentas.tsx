@@ -528,7 +528,7 @@ export default function ConfigCuentas() {
 
           {isMobile ? (
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
-              <DrawerContent className="flex flex-col" style={{ height: '95dvh', maxHeight: '95dvh' }}>
+              <DrawerContent className="flex flex-col" style={{ height: '85dvh', maxHeight: '85dvh' }}>
                 <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
                   <DrawerTitle>{editingCuenta ? 'Editar Cuenta' : 'Nueva Cuenta'}</DrawerTitle>
                 </DrawerHeader>

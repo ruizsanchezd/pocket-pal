@@ -386,7 +386,7 @@ export default function ConfigRecurrentes() {
           {/* Create/Edit Modal */}
           {isMobile ? (
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
-              <DrawerContent className="flex flex-col" style={{ height: '90dvh', maxHeight: '90dvh' }}>
+              <DrawerContent className="flex flex-col" style={{ height: '85dvh', maxHeight: '85dvh' }}>
                 <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
                   <DrawerTitle>
                     {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
