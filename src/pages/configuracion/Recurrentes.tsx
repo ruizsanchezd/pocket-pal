@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -62,6 +62,29 @@ export default function ConfigRecurrentes() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGasto, setEditingGasto] = useState<GastoRecurrenteConRelaciones | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [drawerFullHeight, setDrawerFullHeight] = useState(false);
+  const drawerContentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setDrawerFullHeight(false);
+      return;
+    }
+    let observer: ResizeObserver | null = null;
+    const setup = () => {
+      if (!drawerContentRef.current) return;
+      const el = drawerContentRef.current;
+      observer = new ResizeObserver(() => {
+        setDrawerFullHeight(el.offsetHeight >= window.innerHeight - 2);
+      });
+      observer.observe(el);
+    };
+    const rafId = requestAnimationFrame(setup);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer?.disconnect();
+    };
+  }, [modalOpen]);
 
   // Fetch data
   useEffect(() => {
@@ -386,8 +409,11 @@ export default function ConfigRecurrentes() {
           {/* Create/Edit Modal */}
           {isMobile ? (
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
-              <DrawerContent className="flex flex-col" style={{ height: '85dvh', maxHeight: '85dvh' }}>
-                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+              <DrawerContent
+                ref={drawerContentRef}
+                className={cn("flex flex-col max-h-none", drawerFullHeight && "rounded-t-none")}
+              >
+                <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
                   <DrawerTitle>
                     {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
                   </DrawerTitle>
