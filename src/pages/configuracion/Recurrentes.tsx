@@ -411,7 +411,7 @@ export default function ConfigRecurrentes() {
             <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
               <DrawerContent
                 ref={drawerContentRef}
-                className={cn("flex flex-col max-h-none", drawerFullHeight && "rounded-t-none")}
+                className={cn("flex flex-col max-h-[100dvh]", drawerFullHeight && "rounded-t-none")}
               >
                 <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
                   <DrawerTitle>
