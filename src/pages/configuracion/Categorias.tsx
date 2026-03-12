@@ -15,6 +15,14 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -37,6 +45,8 @@ export default function ConfigCategorias() {
   const { user } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
+  const isMobile = useIsMobile();
+  const swipeDismissCategoria = useSwipeDownToDismiss(() => setModalOpen(false));
 
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,19 +307,36 @@ export default function ConfigCategorias() {
           />
 
           {/* Create Modal */}
-          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-              <DialogHeader>
-                <DialogTitle>Nueva Categoría</DialogTitle>
-                <DialogDescription>Añade una nueva categoría</DialogDescription>
-              </DialogHeader>
-              <CategoriaForm
-                tipo={activeTab}
-                onSubmit={handleSave}
-                onCancel={() => setModalOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          {isMobile ? (
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
+              <DrawerContent className="flex flex-col" style={{ height: '75dvh', maxHeight: '75dvh' }}>
+                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+                  <DrawerTitle>Nueva Categoría</DrawerTitle>
+                </DrawerHeader>
+                <div ref={swipeDismissCategoria} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                  <CategoriaForm
+                    tipo={activeTab}
+                    onSubmit={handleSave}
+                    onCancel={() => setModalOpen(false)}
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>Nueva Categoría</DialogTitle>
+                  <DialogDescription>Añade una nueva categoría</DialogDescription>
+                </DialogHeader>
+                <CategoriaForm
+                  tipo={activeTab}
+                  onSubmit={handleSave}
+                  onCancel={() => setModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete confirmation */}
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

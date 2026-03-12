@@ -13,6 +13,14 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,7 +52,9 @@ export default function ConfigRecurrentes() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
-  
+  const isMobile = useIsMobile();
+  const swipeDismissRecurrente = useSwipeDownToDismiss(() => setModalOpen(false));
+
   const [gastos, setGastos] = useState<GastoRecurrenteConRelaciones[]>([]);
   const [cuentas, setCuentas] = useState<Cuenta[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -374,29 +384,52 @@ export default function ConfigRecurrentes() {
           </Card>
 
           {/* Create/Edit Modal */}
-          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingGasto 
-                    ? 'Modifica los datos del movimiento recurrente' 
-                    : 'Añade un nuevo gasto que se repite cada mes'}
-                </DialogDescription>
-              </DialogHeader>
-              <GastoRecurrenteForm
-                cuentas={cuentas}
-                categorias={categorias}
-                defaultCuentaId={profile?.cuenta_default_id || undefined}
-                initialData={editingGasto || undefined}
-                onSubmit={handleSave}
-                onCancel={() => setModalOpen(false)}
-                onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
-              />
-            </DialogContent>
-          </Dialog>
+          {isMobile ? (
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
+              <DrawerContent className="flex flex-col" style={{ height: '90dvh', maxHeight: '90dvh' }}>
+                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+                  <DrawerTitle>
+                    {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
+                  </DrawerTitle>
+                </DrawerHeader>
+                <div ref={swipeDismissRecurrente} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                  <GastoRecurrenteForm
+                    cuentas={cuentas}
+                    categorias={categorias}
+                    defaultCuentaId={profile?.cuenta_default_id || undefined}
+                    initialData={editingGasto || undefined}
+                    onSubmit={handleSave}
+                    onCancel={() => setModalOpen(false)}
+                    onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent className="max-w-md" onOpenAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingGasto ? 'Editar Movimiento Recurrente' : 'Nuevo Movimiento Recurrente'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingGasto
+                      ? 'Modifica los datos del movimiento recurrente'
+                      : 'Añade un nuevo gasto que se repite cada mes'}
+                  </DialogDescription>
+                </DialogHeader>
+                <GastoRecurrenteForm
+                  cuentas={cuentas}
+                  categorias={categorias}
+                  defaultCuentaId={profile?.cuenta_default_id || undefined}
+                  initialData={editingGasto || undefined}
+                  onSubmit={handleSave}
+                  onCancel={() => setModalOpen(false)}
+                  onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete confirmation */}
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>

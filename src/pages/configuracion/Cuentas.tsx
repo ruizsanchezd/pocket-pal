@@ -12,6 +12,14 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
 import { CuentaForm } from '@/components/configuracion/CuentaForm';
 import {
   DropdownMenu,
@@ -45,7 +53,9 @@ export default function ConfigCuentas() {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
-  
+  const isMobile = useIsMobile();
+  const swipeDismissCuenta = useSwipeDownToDismiss(() => setModalOpen(false));
+
   const [cuentas, setCuentas] = useState<CuentaConConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -516,26 +526,44 @@ export default function ConfigCuentas() {
             </CardContent>
           </Card>
 
-          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-            <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCuenta ? 'Editar Cuenta' : 'Nueva Cuenta'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingCuenta 
-                    ? 'Modifica los datos de la cuenta' 
-                    : 'Añade una nueva cuenta'}
-                </DialogDescription>
-              </DialogHeader>
-              <CuentaForm
-                initialData={editingCuenta || undefined}
-                saldoActual={editingCuenta?.saldo_actual}
-                onSubmit={handleSave}
-                onCancel={() => setModalOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+          {isMobile ? (
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
+              <DrawerContent className="flex flex-col" style={{ height: '95dvh', maxHeight: '95dvh' }}>
+                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+                  <DrawerTitle>{editingCuenta ? 'Editar Cuenta' : 'Nueva Cuenta'}</DrawerTitle>
+                </DrawerHeader>
+                <div ref={swipeDismissCuenta} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                  <CuentaForm
+                    initialData={editingCuenta || undefined}
+                    saldoActual={editingCuenta?.saldo_actual}
+                    onSubmit={handleSave}
+                    onCancel={() => setModalOpen(false)}
+                  />
+                </div>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent onOpenAutoFocus={(e) => e.preventDefault()}>
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingCuenta ? 'Editar Cuenta' : 'Nueva Cuenta'}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingCuenta
+                      ? 'Modifica los datos de la cuenta'
+                      : 'Añade una nueva cuenta'}
+                  </DialogDescription>
+                </DialogHeader>
+                <CuentaForm
+                  initialData={editingCuenta || undefined}
+                  saldoActual={editingCuenta?.saldo_actual}
+                  onSubmit={handleSave}
+                  onCancel={() => setModalOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete confirmation */}
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
