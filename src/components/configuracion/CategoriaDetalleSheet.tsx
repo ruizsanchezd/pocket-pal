@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Categoria, CategoriaConHijos, CategoriaFormData } from '@/types/database';
 
 const EDIT_FORM_ID = 'categoria-edit-form';
@@ -59,6 +60,29 @@ export function CategoriaDetalleSheet({
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [drawerExpanded, setDrawerExpanded] = useState(false);
+  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
+  const touchStartY = useRef(0);
+
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleContentTouchMove = (e: React.TouchEvent) => {
+    if (drawerExpanded) return;
+    if (Math.abs(touchStartY.current - e.touches[0].clientY) > 10) {
+      setDrawerExpanded(true);
+    }
+  };
+
+  const handleContentScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (!drawerExpanded) return;
+    if (e.currentTarget.scrollTop === 0) {
+      collapseTimer.current = setTimeout(() => setDrawerExpanded(false), 150);
+    } else {
+      clearTimeout(collapseTimer.current);
+    }
+  };
 
   useEffect(() => {
     setSubcategorias(categoria?.children ?? []);
@@ -239,8 +263,15 @@ export function CategoriaDetalleSheet({
   return (
     <>
       {isMobile ? (
-        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) onClose(); }} shouldScaleBackground={false}>
-          <DrawerContent className="flex flex-col rounded-t-none" style={{ height: '100dvh', maxHeight: '100dvh' }}>
+        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) { onClose(); setDrawerExpanded(false); } }} shouldScaleBackground={false}>
+          <DrawerContent
+            className={cn("flex flex-col", drawerExpanded && "rounded-t-none")}
+            style={{
+              height: drawerExpanded ? '100dvh' : '85dvh',
+              maxHeight: drawerExpanded ? '100dvh' : '85dvh',
+              transition: 'height 220ms ease-out, max-height 220ms ease-out',
+            }}
+          >
             {categoria && (
               <>
                 <DrawerHeader className="text-left px-6 pt-4 pb-4 shrink-0">
@@ -252,6 +283,9 @@ export function CategoriaDetalleSheet({
                 <div
                   className="flex-1 overflow-y-auto px-6 pb-4 flex flex-col gap-6"
                   data-vaul-no-drag
+                  onTouchStart={handleContentTouchStart}
+                  onTouchMove={handleContentTouchMove}
+                  onScroll={handleContentScroll}
                 >
                   {bodyContent}
                 </div>
