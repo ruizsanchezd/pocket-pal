@@ -75,6 +75,9 @@ export function ProfileSection() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    // TODO: Añadir policy de Storage en Supabase para restringir tipos MIME a nivel servidor.
+    // Actualmente esta validación es solo del lado del cliente y puede ser bypasseada.
+    // Ver: Storage > avatars bucket > Policies > Restricción de tipo MIME (image/*)
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({

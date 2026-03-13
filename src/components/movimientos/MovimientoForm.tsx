@@ -317,7 +317,9 @@ export function MovimientoForm({
                       .single();
 
                     if (error || !data) {
-                      console.error('Error creating category:', error);
+                      if (import.meta.env.DEV) {
+                        console.error('Error creating category:', error);
+                      }
                       return null;
                     }
 
@@ -370,7 +372,9 @@ export function MovimientoForm({
                         .single();
 
                       if (error || !data) {
-                        console.error('Error creating subcategory:', error);
+                        if (import.meta.env.DEV) {
+                          console.error('Error creating subcategory:', error);
+                        }
                         return null;
                       }
 
