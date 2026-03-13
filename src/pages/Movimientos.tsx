@@ -57,7 +57,22 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
+import { MovimientoFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
+
+interface MovimientoInsert {
+  user_id: string;
+  fecha: string;
+  concepto: string;
+  cantidad: number;
+  cuenta_id: string;
+  categoria_id: string;
+  subcategoria_id?: string | null;
+  notas?: string | null;
+  es_recurrente: boolean;
+  recurrente_template_id: string;
+  mes_referencia: string;
+}
 
 export default function Movimientos() {
   const { user, profile } = useAuth();
@@ -244,6 +259,7 @@ export default function Movimientos() {
   };
 
   const handleDeleteMovimiento = async (id: string) => {
+    if (!user) return;
     const { error } = await supabase
       .from('movimientos')
       .delete()
@@ -271,7 +287,7 @@ export default function Movimientos() {
           const { data: templates } = await supabase
             .from('gastos_recurrentes')
             .select('id')
-            .eq('user_id', user!.id)
+            .eq('user_id', user.id)
             .eq('activo', true)
             .limit(1);
           setShowRecurrenteBanner(!!templates && templates.length > 0);
@@ -345,11 +361,16 @@ export default function Movimientos() {
     });
   };
 
-  const handleSaveMovimiento = async (data: any) => {
+  const handleSaveMovimiento = async (data: MovimientoFormData) => {
+    if (!user) return;
     const movimientoData = {
-      ...data,
-      user_id: user!.id,
+      user_id: user.id,
       fecha: format(data.fecha, 'yyyy-MM-dd'),
+      concepto: data.concepto,
+      cantidad: data.cantidad,
+      cuenta_id: data.cuenta_id,
+      categoria_id: data.categoria_id,
+      subcategoria_id: data.subcategoria_id || null,
       mes_referencia: format(data.fecha, 'yyyy-MM')
     };
 
@@ -441,7 +462,7 @@ export default function Movimientos() {
 
     // Create movements from templates
     const date = parse(currentMonth, 'yyyy-MM', new Date());
-    const movimientosToCreate: any[] = [];
+    const movimientosToCreate: MovimientoInsert[] = [];
 
     templates.forEach(t => {
       const fechaStr = format(

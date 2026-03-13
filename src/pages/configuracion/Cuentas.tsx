@@ -40,6 +40,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
+import { CuentaFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 import { format } from 'date-fns';
@@ -128,7 +129,7 @@ export default function ConfigCuentas() {
     setModalOpen(true);
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: CuentaFormData) => {
     if (!user) return;
 
     try {

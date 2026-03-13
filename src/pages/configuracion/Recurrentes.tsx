@@ -39,6 +39,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { GastoRecurrente, Cuenta, Categoria } from '@/types/database';
+import { GastoRecurrenteFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 
@@ -148,7 +149,7 @@ export default function ConfigRecurrentes() {
     setModalOpen(true);
   };
 
-  const handleSave = async (data: any) => {
+  const handleSave = async (data: GastoRecurrenteFormData) => {
     if (!user) return;
 
     try {
