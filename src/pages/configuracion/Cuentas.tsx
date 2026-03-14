@@ -13,6 +13,16 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel
+} from '@/components/ui/alert-dialog';
+import {
   Drawer,
   DrawerContent,
   DrawerHeader,
@@ -45,7 +55,8 @@ import { formatCurrency } from '@/lib/format';
 import { useAccountBalances } from '@/hooks/useAccountBalances';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
-import { format } from 'date-fns';
+import { format, subMonths } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
@@ -66,6 +77,13 @@ export default function ConfigCuentas() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCuenta, setEditingCuenta] = useState<CuentaConConfig | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<CuentaConConfig | null>(null);
+  const [pendingPrevMonthUpdate, setPendingPrevMonthUpdate] = useState<{
+    cuentaId: string;
+    cuentaNombre: string;
+    mesAnterior: string;
+    mesAnteriorLabel: string;
+    saldoNuevo: number;
+  } | null>(null);
 
   const { balances, loading: balancesLoading } = useAccountBalances(rawCuentas);
   const loading = rawLoading || balancesLoading;
@@ -184,6 +202,29 @@ export default function ConfigCuentas() {
               previous_balance: editingCuenta.saldo_actual || 0,
               new_balance: data.saldo_actual
             });
+
+          // Check if previous month snapshot is missing saldo_registrado
+          const prevMonth = format(subMonths(new Date(), 1), 'yyyy-MM');
+          if (prevMonth !== currentMonth) {
+            const { data: prevSnap } = await supabase
+              .from('snapshots_patrimonio')
+              .select('id, saldo_registrado')
+              .eq('user_id', user.id)
+              .eq('mes', prevMonth)
+              .eq('cuenta_id', editingCuenta.id)
+              .single();
+
+            if (!prevSnap || prevSnap.saldo_registrado === null) {
+              const prevMonthDate = subMonths(new Date(), 1);
+              setPendingPrevMonthUpdate({
+                cuentaId: editingCuenta.id,
+                cuentaNombre: editingCuenta.nombre,
+                mesAnterior: prevMonth,
+                mesAnteriorLabel: format(prevMonthDate, 'MMMM yyyy', { locale: es }),
+                saldoNuevo: data.saldo_actual
+              });
+            }
+          }
         } else {
           // Normal update (no balance change)
           const { error: updateError } = await supabase
@@ -366,6 +407,35 @@ export default function ConfigCuentas() {
     toast({ title: 'Cuenta eliminada' });
   };
 
+  const handleConfirmPrevMonth = async () => {
+    if (!user || !pendingPrevMonthUpdate) return;
+    const { cuentaId, mesAnterior, saldoNuevo } = pendingPrevMonthUpdate;
+
+    try {
+      await supabase
+        .from('snapshots_patrimonio')
+        .upsert(
+          {
+            user_id: user.id,
+            mes: mesAnterior,
+            cuenta_id: cuentaId,
+            saldo_registrado: saldoNuevo,
+            tipo: 'manual'
+          },
+          { onConflict: 'user_id,mes,cuenta_id' }
+        );
+
+      toast({ title: `Snapshot de ${pendingPrevMonthUpdate.mesAnteriorLabel} actualizado` });
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo actualizar el mes anterior'
+      });
+    }
+    setPendingPrevMonthUpdate(null);
+  };
+
   // Group accounts by type
   const groupedCuentas = {
     corriente: cuentas.filter(c => c.tipo === 'corriente'),
@@ -535,6 +605,33 @@ export default function ConfigCuentas() {
               </DialogContent>
             </Dialog>
           )}
+
+          {/* Previous month snapshot prompt */}
+          <AlertDialog
+            open={!!pendingPrevMonthUpdate}
+            onOpenChange={(open) => { if (!open) setPendingPrevMonthUpdate(null); }}
+          >
+            <AlertDialogContent className="max-w-sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Actualizar mes anterior</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {pendingPrevMonthUpdate && (
+                    <>
+                      El snapshot de <span className="font-medium">{pendingPrevMonthUpdate.mesAnteriorLabel}</span> para{' '}
+                      <span className="font-medium">{pendingPrevMonthUpdate.cuentaNombre}</span> no tiene un saldo manual registrado.
+                      {' '}¿Quieres aplicar también este saldo a ese mes?
+                    </>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>No, solo este mes</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmPrevMonth}>
+                  Sí, actualizar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Delete confirmation */}
           <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
