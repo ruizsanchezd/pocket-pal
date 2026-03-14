@@ -425,20 +425,24 @@ export default function Movimientos() {
         return;
       }
 
-      // Add to local state
-      const movimientoConRelaciones = {
-        ...created,
-        cuenta: cuentas.find(c => c.id === created.cuenta_id),
-        categoria: categorias.find(c => c.id === created.categoria_id),
-        subcategoria: created.subcategoria_id 
-          ? categorias.find(c => c.id === created.subcategoria_id)
-          : null
-      } as MovimientoConRelaciones;
+      // Refetch from DB to guarantee correct order and avoid stale local state
+      const { data: refreshed } = await supabase
+        .from('movimientos')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('mes_referencia', currentMonth)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      setMovimientos([...movimientos, movimientoConRelaciones].sort(
-        (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-      ));
-      
+      if (refreshed) {
+        setMovimientos(refreshed.map(m => ({
+          ...m,
+          cuenta: cuentas.find(c => c.id === m.cuenta_id),
+          categoria: categorias.find(c => c.id === m.categoria_id),
+          subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
+        })) as MovimientoConRelaciones[]);
+      }
+
       toast({ title: 'Movimiento creado' });
     }
 
@@ -518,20 +522,22 @@ export default function Movimientos() {
       return;
     }
 
-    // Add to local state
-    if (created) {
-      const newMovimientos = created.map(m => ({
+    // Refetch from DB to guarantee correct order
+    const { data: refreshed } = await supabase
+      .from('movimientos')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('mes_referencia', currentMonth)
+      .order('fecha', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (refreshed) {
+      setMovimientos(refreshed.map(m => ({
         ...m,
         cuenta: cuentas.find(c => c.id === m.cuenta_id),
         categoria: categorias.find(c => c.id === m.categoria_id),
-        subcategoria: m.subcategoria_id 
-          ? categorias.find(c => c.id === m.subcategoria_id)
-          : null
-      })) as MovimientoConRelaciones[];
-
-      setMovimientos([...movimientos, ...newMovimientos].sort(
-        (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime()
-      ));
+        subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
+      })) as MovimientoConRelaciones[]);
     }
 
     setShowRecurrenteBanner(false);

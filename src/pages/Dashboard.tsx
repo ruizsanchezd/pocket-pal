@@ -197,6 +197,11 @@ export default function Dashboard() {
         );
         patrimonioByMonth.set(currentMonth, currentMonthPatrimonio);
 
+        // Calculate previous month patrimonio before building the chart array
+        const prevMonthStr = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM');
+        const prevMonthPatrimonio = patrimonioByMonth.get(prevMonthStr) || 0;
+        const prevMonthHasData = patrimonioByMonth.has(prevMonthStr);
+
         // Build chart data for last 6 months
         const patrimonioHistory: PatrimonioData[] = [];
         for (let i = 5; i >= 0; i--) {
@@ -209,16 +214,10 @@ export default function Dashboard() {
             mes: monthLabel,
             patrimonio
           });
-
-          // Store previous month patrimonio
-          if (i === 1) {
-            const monthStr2 = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM');
-            const hasData = patrimonioByMonth.has(monthStr2);
-            setMesAnteriorPatrimonio(patrimonio);
-            setHasMesAnteriorData(hasData);
-          }
         }
 
+        setMesAnteriorPatrimonio(prevMonthPatrimonio);
+        setHasMesAnteriorData(prevMonthHasData);
         setPatrimonioData(patrimonioHistory);
 
         // Fetch current month totals
