@@ -1,9 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { useWebHaptics } from 'web-haptics/react';
-import { format, parse, addMonths, subMonths } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useRef } from 'react';
+import { format } from 'date-fns';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { Button } from '@/components/ui/button';
@@ -38,13 +34,12 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MovimientoForm } from '@/components/movimientos/MovimientoForm';
 import { SwipeableRow } from '@/components/movimientos/SwipeableRow';
-import { useToast } from '@/hooks/use-toast';
-import { ToastAction } from '@/components/ui/toast';
+import { RecurrenteBanner } from '@/components/movimientos/RecurrenteBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
+import { useMovimientos } from '@/hooks/useMovimientos';
 import {
   ChevronLeft,
   ChevronRight,
@@ -52,46 +47,51 @@ import {
   Trash2,
   Receipt,
   Loader2,
-  AlertCircle,
   Check,
   ChevronDown,
 } from 'lucide-react';
-import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
-import { MovimientoFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 
-interface MovimientoInsert {
-  user_id: string;
-  fecha: string;
-  concepto: string;
-  cantidad: number;
-  cuenta_id: string;
-  categoria_id: string;
-  subcategoria_id?: string | null;
-  notas?: string | null;
-  es_recurrente: boolean;
-  recurrente_template_id: string;
-  mes_referencia: string;
-}
-
 export default function Movimientos() {
-  const { user, profile } = useAuth();
-  const { toast } = useToast();
-  const haptic = useWebHaptics();
+  const {
+    cuentas,
+    categorias,
+    loading,
+    showRecurrenteBanner,
+    formattedMonth,
+    categoriasParent,
+    todasSubcategorias,
+    subcategoriasFiltradas,
+    filteredMovimientos,
+    totals,
+    currency,
+    filtroCategoria,
+    filtroSubcategoria,
+    setFiltroCategoria,
+    setFiltroSubcategoria,
+    modalOpen,
+    setModalOpen,
+    editingMovimiento,
+    deleteConfirm,
+    setDeleteConfirm,
+    setShowRecurrenteBanner,
+    navigateMonth,
+    handleCreateMovimiento,
+    handleEditMovimiento,
+    handleDeleteMovimiento,
+    handleSwipeDelete,
+    handleSaveMovimiento,
+    handleGenerateRecurrentes,
+    addCategoria,
+    haptic,
+    profile,
+    movimientos,
+  } = useMovimientos();
+
   const isMobile = useIsMobile();
 
-  const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([]);
-  const [cuentas, setCuentas] = useState<Cuenta[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingMovimiento, setEditingMovimiento] = useState<MovimientoConRelaciones | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [showRecurrenteBanner, setShowRecurrenteBanner] = useState(false);
-  const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
-  const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>('__all__');
+  // Drawer presentation state (UI-only)
   const [drawerCategoriaOpen, setDrawerCategoriaOpen] = useState(false);
   const [drawerCategoriaExpanded, setDrawerCategoriaExpanded] = useState(false);
   const collapseTimerCategoria = useRef<ReturnType<typeof setTimeout>>();
@@ -121,434 +121,6 @@ export default function Movimientos() {
   const swipeDismissCategoria = useSwipeDownToDismiss(() => setDrawerCategoriaOpen(false));
   const swipeDismissSubcategoria = useSwipeDownToDismiss(() => setDrawerSubcategoriaOpen(false));
   const swipeDismissMovimiento = useSwipeDownToDismiss(() => setModalOpen(false));
-
-  // Format month for display
-  const formattedMonth = useMemo(() => {
-    const date = parse(currentMonth, 'yyyy-MM', new Date());
-    return format(date, 'MMMM yyyy', { locale: es });
-  }, [currentMonth]);
-
-  // Get parent categories and all subcategories
-  const categoriasParent = useMemo(() => {
-    return categorias.filter(c => !c.parent_id);
-  }, [categorias]);
-
-  const todasSubcategorias = useMemo(() => {
-    return categorias.filter(c => c.parent_id);
-  }, [categorias]);
-
-  const subcategoriasFiltradas = useMemo(() => {
-    if (filtroCategoria !== '__all__') {
-      return todasSubcategorias.filter(s => s.parent_id === filtroCategoria);
-    }
-    return todasSubcategorias;
-  }, [todasSubcategorias, filtroCategoria]);
-
-  // Filter movements
-  const filteredMovimientos = useMemo(() => {
-    let filtered = movimientos;
-    if (filtroCategoria !== '__all__') {
-      filtered = filtered.filter(m => m.categoria_id === filtroCategoria);
-    }
-    if (filtroSubcategoria !== '__all__') {
-      filtered = filtered.filter(m => m.subcategoria_id === filtroSubcategoria);
-    }
-    return filtered;
-  }, [movimientos, filtroCategoria, filtroSubcategoria]);
-
-  // Calculate totals from filtered movements
-  const totals = useMemo(() => {
-    const ingresos = filteredMovimientos
-      .filter(m => m.cantidad > 0)
-      .reduce((sum, m) => sum + Number(m.cantidad), 0);
-    const gastos = filteredMovimientos
-      .filter(m => m.cantidad < 0)
-      .reduce((sum, m) => sum + Math.abs(Number(m.cantidad)), 0);
-    return {
-      ingresos,
-      gastos,
-      balance: ingresos - gastos
-    };
-  }, [filteredMovimientos]);
-
-  // Fetch data
-  useEffect(() => {
-    if (!user) return;
-    
-    const fetchData = async () => {
-      setLoading(true);
-      
-      // Fetch accounts, categories and movements in parallel
-      const [
-        { data: cuentasData },
-        { data: categoriasData },
-        { data: movimientosData }
-      ] = await Promise.all([
-        supabase
-          .from('cuentas')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('activa', true)
-          .order('orden'),
-        supabase
-          .from('categorias')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('orden'),
-        supabase
-          .from('movimientos')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('mes_referencia', currentMonth)
-          .order('fecha', { ascending: false })
-          .order('created_at', { ascending: false })
-      ]);
-
-      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
-      if (categoriasData) setCategorias(categoriasData as Categoria[]);
-
-      // Map movements after all data is available
-      const movimientosConRelaciones = movimientosData
-        ? movimientosData.map(m => ({
-            ...m,
-            cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
-            categoria: categoriasData?.find(c => c.id === m.categoria_id),
-            subcategoria: m.subcategoria_id
-              ? categoriasData?.find(c => c.id === m.subcategoria_id)
-              : null
-          })) as MovimientoConRelaciones[]
-        : [];
-
-      setMovimientos(movimientosConRelaciones);
-
-      // Check if we should show recurrente banner
-      // Show banner if: in current month AND no recurring movements AND has active templates
-      const hasRecurrentes = movimientosData?.some(m => m.es_recurrente) || false;
-      if (!hasRecurrentes && currentMonth === format(new Date(), 'yyyy-MM')) {
-        const { data: templates } = await supabase
-          .from('gastos_recurrentes')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('activo', true)
-          .limit(1);
-
-        setShowRecurrenteBanner(!!templates && templates.length > 0);
-      } else {
-        setShowRecurrenteBanner(false);
-      }
-      
-      setLoading(false);
-    };
-
-    fetchData();
-  }, [user, currentMonth]);
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    haptic.trigger('selection');
-    const date = parse(currentMonth, 'yyyy-MM', new Date());
-    const newDate = direction === 'prev' ? subMonths(date, 1) : addMonths(date, 1);
-    setCurrentMonth(format(newDate, 'yyyy-MM'));
-  };
-
-  const handleCreateMovimiento = () => {
-    setEditingMovimiento(null);
-    setModalOpen(true);
-  };
-
-  const handleEditMovimiento = (movimiento: MovimientoConRelaciones) => {
-    setEditingMovimiento(movimiento);
-    setModalOpen(true);
-  };
-
-  const handleDeleteMovimiento = async (id: string) => {
-    if (!user) return;
-    const { error } = await supabase
-      .from('movimientos')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo eliminar el movimiento'
-      });
-    } else {
-      haptic.trigger('success');
-      const updatedMovimientos = movimientos.filter(m => m.id !== id);
-      setMovimientos(updatedMovimientos);
-      toast({ title: 'Movimiento eliminado' });
-
-      // Re-evaluate banner: if we deleted the last es_recurrente in the current month,
-      // check if active templates exist and show the banner again
-      const isCurrentMonth = currentMonth === format(new Date(), 'yyyy-MM');
-      const deletedWasRecurrente = movimientos.find(m => m.id === id)?.es_recurrente;
-      if (isCurrentMonth && deletedWasRecurrente) {
-        const stillHasRecurrentes = updatedMovimientos.some(m => m.es_recurrente);
-        if (!stillHasRecurrentes) {
-          const { data: templates } = await supabase
-            .from('gastos_recurrentes')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('activo', true)
-            .limit(1);
-          setShowRecurrenteBanner(!!templates && templates.length > 0);
-        }
-      }
-    }
-    setDeleteConfirm(null);
-  };
-
-  const handleUndoDelete = async (movimiento: MovimientoConRelaciones) => {
-    const { error } = await supabase.from('movimientos').insert({
-      user_id: movimiento.user_id,
-      fecha: movimiento.fecha,
-      concepto: movimiento.concepto,
-      cantidad: movimiento.cantidad,
-      tipo: movimiento.tipo,
-      cuenta_id: movimiento.cuenta_id,
-      categoria_id: movimiento.categoria_id,
-      subcategoria_id: movimiento.subcategoria_id,
-      mes_referencia: movimiento.mes_referencia,
-      notas: movimiento.notas,
-      es_recurrente: movimiento.es_recurrente,
-    });
-
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo restaurar el movimiento' });
-      return;
-    }
-
-    // Refetch using the same pattern as the main fetch
-    const { data: refreshed } = await supabase
-      .from('movimientos')
-      .select('*')
-      .eq('user_id', user!.id)
-      .eq('mes_referencia', currentMonth)
-      .order('fecha', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (refreshed) {
-      setMovimientos(refreshed.map(m => ({
-        ...m,
-        cuenta: cuentas.find(c => c.id === m.cuenta_id),
-        categoria: categorias.find(c => c.id === m.categoria_id),
-        subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
-      })) as MovimientoConRelaciones[]);
-    }
-    toast({ title: 'Movimiento restaurado' });
-  };
-
-  const handleSwipeDelete = async (movimiento: MovimientoConRelaciones) => {
-    const { error } = await supabase
-      .from('movimientos')
-      .delete()
-      .eq('id', movimiento.id);
-
-    if (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar' });
-      return;
-    }
-
-    setMovimientos(prev => prev.filter(m => m.id !== movimiento.id));
-    haptic.trigger('success');
-
-    toast({
-      title: 'Movimiento eliminado',
-      action: (
-        <ToastAction altText="Deshacer" onClick={() => handleUndoDelete(movimiento)}>
-          Deshacer
-        </ToastAction>
-      ),
-    });
-  };
-
-  const handleSaveMovimiento = async (data: MovimientoFormData) => {
-    if (!user) return;
-    const movimientoData = {
-      user_id: user.id,
-      fecha: format(data.fecha, 'yyyy-MM-dd'),
-      concepto: data.concepto,
-      cantidad: data.cantidad,
-      cuenta_id: data.cuenta_id,
-      categoria_id: data.categoria_id,
-      subcategoria_id: data.subcategoria_id || null,
-      mes_referencia: format(data.fecha, 'yyyy-MM')
-    };
-
-    if (editingMovimiento) {
-      // Update
-      const { data: updated, error } = await supabase
-        .from('movimientos')
-        .update(movimientoData)
-        .eq('id', editingMovimiento.id)
-        .select()
-        .single();
-
-      if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudo actualizar el movimiento'
-        });
-        return;
-      }
-
-      // Update local state
-      const movimientoConRelaciones = {
-        ...updated,
-        cuenta: cuentas.find(c => c.id === updated.cuenta_id),
-        categoria: categorias.find(c => c.id === updated.categoria_id),
-        subcategoria: updated.subcategoria_id 
-          ? categorias.find(c => c.id === updated.subcategoria_id)
-          : null
-      } as MovimientoConRelaciones;
-
-      setMovimientos(movimientos.map(m => 
-        m.id === editingMovimiento.id ? movimientoConRelaciones : m
-      ));
-      
-      toast({ title: 'Movimiento actualizado' });
-    } else {
-      // Create
-      const { data: created, error } = await supabase
-        .from('movimientos')
-        .insert(movimientoData)
-        .select()
-        .single();
-
-      if (error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'No se pudo crear el movimiento'
-        });
-        return;
-      }
-
-      // Refetch from DB to guarantee correct order and avoid stale local state
-      const { data: refreshed } = await supabase
-        .from('movimientos')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('mes_referencia', currentMonth)
-        .order('fecha', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (refreshed) {
-        setMovimientos(refreshed.map(m => ({
-          ...m,
-          cuenta: cuentas.find(c => c.id === m.cuenta_id),
-          categoria: categorias.find(c => c.id === m.categoria_id),
-          subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
-        })) as MovimientoConRelaciones[]);
-      }
-
-      toast({ title: 'Movimiento creado' });
-    }
-
-    setModalOpen(false);
-    setEditingMovimiento(null);
-  };
-
-  const handleGenerateRecurrentes = async () => {
-    if (!user) return;
-
-    // Fetch recurring templates
-    const { data: templates } = await supabase
-      .from('gastos_recurrentes')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('activo', true);
-
-    if (!templates || templates.length === 0) {
-      setShowRecurrenteBanner(false);
-      return;
-    }
-
-    // Create movements from templates
-    const date = parse(currentMonth, 'yyyy-MM', new Date());
-    const movimientosToCreate: MovimientoInsert[] = [];
-
-    templates.forEach(t => {
-      const fechaStr = format(
-        new Date(date.getFullYear(), date.getMonth(), 1),
-        'yyyy-MM-dd'
-      );
-
-      // Origin movement (always created)
-      movimientosToCreate.push({
-        user_id: user.id,
-        fecha: fechaStr,
-        concepto: t.concepto,
-        cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
-        cuenta_id: t.cuenta_id,
-        categoria_id: t.categoria_id,
-        subcategoria_id: t.subcategoria_id,
-        notas: t.notas,
-        es_recurrente: true,
-        recurrente_template_id: t.id,
-        mes_referencia: currentMonth
-      });
-
-      // If transfer, create the destination movement
-      if (t.is_transfer && t.destination_account_id) {
-        movimientosToCreate.push({
-          user_id: user.id,
-          fecha: fechaStr,
-          concepto: t.concepto,
-          cantidad: Math.abs(t.cantidad),
-          cuenta_id: t.destination_account_id,
-          categoria_id: t.categoria_id,
-          subcategoria_id: t.subcategoria_id,
-          notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
-          es_recurrente: true,
-          recurrente_template_id: t.id,
-          mes_referencia: currentMonth
-        });
-      }
-    });
-
-    const { data: created, error } = await supabase
-      .from('movimientos')
-      .insert(movimientosToCreate)
-      .select();
-
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudieron generar los gastos recurrentes'
-      });
-      return;
-    }
-
-    // Refetch from DB to guarantee correct order
-    const { data: refreshed } = await supabase
-      .from('movimientos')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('mes_referencia', currentMonth)
-      .order('fecha', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (refreshed) {
-      setMovimientos(refreshed.map(m => ({
-        ...m,
-        cuenta: cuentas.find(c => c.id === m.cuenta_id),
-        categoria: categorias.find(c => c.id === m.categoria_id),
-        subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
-      })) as MovimientoConRelaciones[]);
-    }
-
-    setShowRecurrenteBanner(false);
-    toast({
-      title: 'Gastos recurrentes generados',
-      description: `Se crearon ${movimientosToCreate.length} movimientos`
-    });
-  };
-
-  const currency = profile?.divisa_principal || 'EUR';
 
   return (
     <ProtectedRoute>
@@ -592,29 +164,11 @@ export default function Movimientos() {
           </div>
 
           {/* Recurrent expenses banner */}
-          {showRecurrenteBanner && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="flex items-center justify-between">
-                <span>¿Generar gastos recurrentes para este mes?</span>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowRecurrenteBanner(false)}
-                  >
-                    No
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={handleGenerateRecurrentes}
-                  >
-                    Sí, generar
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+          <RecurrenteBanner
+            show={showRecurrenteBanner}
+            onDismiss={() => setShowRecurrenteBanner(false)}
+            onGenerate={handleGenerateRecurrentes}
+          />
 
           {/* Movements table */}
           <Card>
@@ -1086,7 +640,7 @@ export default function Movimientos() {
                     initialData={editingMovimiento || undefined}
                     onSubmit={handleSaveMovimiento}
                     onCancel={() => setModalOpen(false)}
-                    onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                    onCategoriaCreated={addCategoria}
                     disableAutoFocus
                   />
                 </div>
@@ -1112,7 +666,7 @@ export default function Movimientos() {
                   initialData={editingMovimiento || undefined}
                   onSubmit={handleSaveMovimiento}
                   onCancel={() => setModalOpen(false)}
-                  onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                  onCategoriaCreated={addCategoria}
                 />
               </DialogContent>
             </Dialog>
@@ -1131,8 +685,8 @@ export default function Movimientos() {
                 <Button variant="outline" onClick={() => setDeleteConfirm(null)}>
                   Cancelar
                 </Button>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={() => deleteConfirm && handleDeleteMovimiento(deleteConfirm)}
                 >
                   Eliminar
