@@ -94,42 +94,43 @@ export default function ConfigRecurrentes() {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch accounts
-      const { data: cuentasData } = await supabase
-        .from('cuentas')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('activa', true)
-        .order('orden');
-      
+      // Fetch accounts, categories and recurring expenses in parallel
+      const [
+        { data: cuentasData },
+        { data: categoriasData },
+        { data: gastosData }
+      ] = await Promise.all([
+        supabase
+          .from('cuentas')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('activa', true)
+          .order('orden'),
+        supabase
+          .from('categorias')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('orden'),
+        supabase
+          .from('gastos_recurrentes')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('concepto')
+      ]);
+
       if (cuentasData) setCuentas(cuentasData as Cuenta[]);
-
-      // Fetch categories
-      const { data: categoriasData } = await supabase
-        .from('categorias')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('orden');
-      
       if (categoriasData) setCategorias(categoriasData as Categoria[]);
-
-      // Fetch recurring expenses
-      const { data: gastosData } = await supabase
-        .from('gastos_recurrentes')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('concepto');
 
       if (gastosData) {
         const gastosConRelaciones = gastosData.map(g => ({
           ...g,
           cuenta: cuentasData?.find(c => c.id === g.cuenta_id),
           categoria: categoriasData?.find(c => c.id === g.categoria_id),
-          subcategoria: g.subcategoria_id 
+          subcategoria: g.subcategoria_id
             ? categoriasData?.find(c => c.id === g.subcategoria_id)
             : null
         })) as GastoRecurrenteConRelaciones[];
-        
+
         setGastos(gastosConRelaciones);
       }
       

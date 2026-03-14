@@ -83,7 +83,7 @@ export default function Dashboard() {
       // Fetch accounts with calculated balance
       const { data: cuentasData } = await supabase
         .from('cuentas')
-        .select('*')
+        .select('id, nombre, tipo, saldo_inicial, color, created_at, capital_inicial_invertido, divisa, activa')
         .eq('user_id', user.id)
         .eq('activa', true)
         .order('orden');
@@ -91,7 +91,7 @@ export default function Dashboard() {
       // Fetch monedero configs for recarga mensual calculation
       const { data: monederoConfigs } = await supabase
         .from('cuentas_monedero_config')
-        .select('*')
+        .select('cuenta_id, recarga_mensual')
         .eq('user_id', user.id);
 
       if (cuentasData) {

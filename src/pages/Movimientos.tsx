@@ -178,35 +178,36 @@ export default function Movimientos() {
     const fetchData = async () => {
       setLoading(true);
       
-      // Fetch accounts
-      const { data: cuentasData } = await supabase
-        .from('cuentas')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('activa', true)
-        .order('orden');
-      
-      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
+      // Fetch accounts, categories and movements in parallel
+      const [
+        { data: cuentasData },
+        { data: categoriasData },
+        { data: movimientosData }
+      ] = await Promise.all([
+        supabase
+          .from('cuentas')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('activa', true)
+          .order('orden'),
+        supabase
+          .from('categorias')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('orden'),
+        supabase
+          .from('movimientos')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('mes_referencia', currentMonth)
+          .order('fecha', { ascending: false })
+          .order('created_at', { ascending: false })
+      ]);
 
-      // Fetch categories
-      const { data: categoriasData } = await supabase
-        .from('categorias')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('orden');
-      
+      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
       if (categoriasData) setCategorias(categoriasData as Categoria[]);
 
-      // Fetch movements for current month
-      const { data: movimientosData } = await supabase
-        .from('movimientos')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('mes_referencia', currentMonth)
-        .order('fecha', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      // Map movements if they exist
+      // Map movements after all data is available
       const movimientosConRelaciones = movimientosData
         ? movimientosData.map(m => ({
             ...m,

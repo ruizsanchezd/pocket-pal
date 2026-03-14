@@ -90,7 +90,7 @@ export default function ConfigCuentas() {
 
       const { data: cuentasData } = await supabase
         .from('cuentas')
-        .select('*')
+        .select('id, nombre, tipo, saldo_inicial, color, activa, orden, capital_inicial_invertido, divisa, created_at')
         .eq('user_id', user.id)
         .order('orden');
 
@@ -263,7 +263,7 @@ export default function ConfigCuentas() {
       // Refresh list — setting rawCuentas triggers useAccountBalances to recompute balances
       const { data: cuentasData } = await supabase
         .from('cuentas')
-        .select('*')
+        .select('id, nombre, tipo, saldo_inicial, color, activa, orden, capital_inicial_invertido, divisa, created_at')
         .eq('user_id', user.id)
         .order('orden');
 

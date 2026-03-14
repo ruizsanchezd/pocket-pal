@@ -84,7 +84,7 @@ export function DistribucionSection() {
         // Fetch categories
         const { data: categoriasData } = await supabase
           .from('categorias')
-          .select('*')
+          .select('id, nombre, parent_id, color, tipo')
           .eq('user_id', user.id)
           .order('orden');
 
