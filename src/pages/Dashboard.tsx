@@ -6,15 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Cuenta, CuentaConSaldo } from '@/types/database';
+import { CuentaConSaldo } from '@/types/database';
 import { Loader2, TrendingUp, TrendingDown, Wallet, PiggyBank, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
-// NOTE: useAccountBalances is not used here because Dashboard's balance computation
-// is intertwined with inversion-specific logic: it needs the raw movimientos array
-// (not just the sum) to separate `depositos` (positive movements) from the total,
-// which is required to compute `invertido` and `rendimiento` for each inversion account.
-// Extracting only the sum would force a second movimientos fetch for those accounts.
+import { useCuentas } from '@/hooks/useStaticData';
 import {
   LineChart,
   Line,
@@ -38,8 +34,12 @@ export default function Dashboard() {
   // Auto-generate snapshots for previous month if needed
   useAutoSnapshot(user?.id);
 
+  // Cached base cuentas from React Query; balance computation below produces CuentaConSaldo[]
+  const { data: rawCuentas = [], isLoading: cuentasLoading } = useCuentas();
+
   const [cuentas, setCuentas] = useState<CuentaConSaldo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const loading = cuentasLoading || dashboardLoading;
   const [patrimonioData, setPatrimonioData] = useState<PatrimonioData[]>([]);
   const [mesAnteriorPatrimonio, setMesAnteriorPatrimonio] = useState(0);
   const [hasMesAnteriorData, setHasMesAnteriorData] = useState(false);
@@ -73,20 +73,14 @@ export default function Dashboard() {
     };
   }, [cuentas, currentMonthTotals, mesAnteriorPatrimonio, hasMesAnteriorData, patrimonioData]);
 
-  // Fetch data
+  // Fetch data — cuentas come from React Query cache; rest is Dashboard-specific
   useEffect(() => {
-    if (!user) return;
+    if (!user || cuentasLoading) return;
 
     const fetchData = async () => {
-      setLoading(true);
+      setDashboardLoading(true);
 
-      // Fetch accounts with calculated balance
-      const { data: cuentasData } = await supabase
-        .from('cuentas')
-        .select('id, nombre, tipo, saldo_inicial, color, created_at, capital_inicial_invertido, divisa, activa')
-        .eq('user_id', user.id)
-        .eq('activa', true)
-        .order('orden');
+      const cuentasData = rawCuentas;
 
       // Fetch monedero configs for recarga mensual calculation
       const { data: monederoConfigs } = await supabase
@@ -94,7 +88,7 @@ export default function Dashboard() {
         .select('cuenta_id, recarga_mensual')
         .eq('user_id', user.id);
 
-      if (cuentasData) {
+      if (cuentasData.length > 0) {
         const now = new Date();
 
         // For each account, calculate current balance
@@ -239,11 +233,11 @@ export default function Dashboard() {
         }
       }
 
-      setLoading(false);
+      setDashboardLoading(false);
     };
 
     fetchData();
-  }, [user]);
+  }, [user, rawCuentas, cuentasLoading]);
 
   const currency = profile?.divisa_principal || 'EUR';
 

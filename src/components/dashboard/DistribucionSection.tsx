@@ -12,8 +12,9 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
-import { Movimiento, Categoria } from '@/types/database';
+import { Movimiento } from '@/types/database';
 import { formatCurrency } from '@/lib/format';
+import { useCategorias } from '@/hooks/useStaticData';
 import {
   BarChart,
   Bar,
@@ -38,9 +39,11 @@ export function DistribucionSection() {
   const [trimestre, setTrimestre] = useState(Math.floor(new Date().getMonth() / 3) + 1);
   const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento>('gastos');
 
+  // Cached categories from React Query
+  const { data: categorias = [], isLoading: categoriasLoading } = useCategorias();
+
   // Data state
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Generate year options (current year ± 5 years)
@@ -81,16 +84,7 @@ export function DistribucionSection() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch categories
-        const { data: categoriasData } = await supabase
-          .from('categorias')
-          .select('id, nombre, parent_id, color, tipo')
-          .eq('user_id', user.id)
-          .order('orden');
-
-        if (categoriasData) setCategorias(categoriasData as Categoria[]);
-
-        // Build query for movements
+        // Build query for movements (categorias come from React Query cache)
         let query = supabase
           .from('movimientos')
           .select('*')

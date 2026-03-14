@@ -2,11 +2,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, parse, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useWebHaptics } from 'web-haptics/react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
+import { useCuentas, useCategorias } from '@/hooks/useStaticData';
+import { MovimientoConRelaciones, Movimiento, Categoria } from '@/types/database';
 import { MovimientoFormData } from '@/lib/validations';
 
 interface MovimientoInsert {
@@ -27,13 +29,32 @@ export function useMovimientos() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const haptic = useWebHaptics();
+  const queryClient = useQueryClient();
 
-  // Core data state
+  // Cached static data
+  const { data: cuentas = [], isLoading: cuentasLoading } = useCuentas();
+  const { data: categorias = [], isLoading: categoriasLoading } = useCategorias();
+
+  // Core data state — only movimientos are fetched per-page
   const [currentMonth, setCurrentMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [movimientos, setMovimientos] = useState<MovimientoConRelaciones[]>([]);
-  const [cuentas, setCuentas] = useState<Cuenta[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rawMovimientos, setRawMovimientos] = useState<Movimiento[]>([]);
+  const [movimientosLoading, setMovimientosLoading] = useState(true);
+
+  // Map raw movimientos with relaciones reactively
+  const movimientos = useMemo<MovimientoConRelaciones[]>(
+    () =>
+      rawMovimientos.map(m => ({
+        ...m,
+        cuenta: cuentas.find(c => c.id === m.cuenta_id),
+        categoria: categorias.find(c => c.id === m.categoria_id),
+        subcategoria: m.subcategoria_id
+          ? categorias.find(c => c.id === m.subcategoria_id)
+          : null,
+      })) as MovimientoConRelaciones[],
+    [rawMovimientos, cuentas, categorias]
+  );
+
+  const loading = cuentasLoading || categoriasLoading || movimientosLoading;
 
   // UI state managed here because it's coupled to data operations
   const [modalOpen, setModalOpen] = useState(false);
@@ -84,53 +105,22 @@ export function useMovimientos() {
 
   const currency = profile?.divisa_principal || 'EUR';
 
-  // Fetch data
+  // Fetch only movimientos (cuentas/categorias come from React Query cache)
   useEffect(() => {
     if (!user) return;
 
-    const fetchData = async () => {
-      setLoading(true);
+    const fetchMovimientos = async () => {
+      setMovimientosLoading(true);
 
-      const [
-        { data: cuentasData },
-        { data: categoriasData },
-        { data: movimientosData }
-      ] = await Promise.all([
-        supabase
-          .from('cuentas')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('activa', true)
-          .order('orden'),
-        supabase
-          .from('categorias')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('orden'),
-        supabase
-          .from('movimientos')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('mes_referencia', currentMonth)
-          .order('fecha', { ascending: false })
-          .order('created_at', { ascending: false })
-      ]);
+      const { data: movimientosData } = await supabase
+        .from('movimientos')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('mes_referencia', currentMonth)
+        .order('fecha', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
-      if (categoriasData) setCategorias(categoriasData as Categoria[]);
-
-      const movimientosConRelaciones = movimientosData
-        ? movimientosData.map(m => ({
-            ...m,
-            cuenta: cuentasData?.find(c => c.id === m.cuenta_id),
-            categoria: categoriasData?.find(c => c.id === m.categoria_id),
-            subcategoria: m.subcategoria_id
-              ? categoriasData?.find(c => c.id === m.subcategoria_id)
-              : null
-          })) as MovimientoConRelaciones[]
-        : [];
-
-      setMovimientos(movimientosConRelaciones);
+      setRawMovimientos((movimientosData ?? []) as Movimiento[]);
 
       // Check if we should show recurrente banner
       const hasRecurrentes = movimientosData?.some(m => m.es_recurrente) || false;
@@ -147,15 +137,15 @@ export function useMovimientos() {
         setShowRecurrenteBanner(false);
       }
 
-      setLoading(false);
+      setMovimientosLoading(false);
     };
 
-    fetchData();
+    fetchMovimientos();
   }, [user, currentMonth]);
 
-  // Shared refetch helper
+  // Shared refetch helper — just updates raw data, useMemo handles mapping
   const refetchMovimientos = async () => {
-    const { data: refreshed } = await supabase
+    const { data } = await supabase
       .from('movimientos')
       .select('*')
       .eq('user_id', user!.id)
@@ -163,14 +153,7 @@ export function useMovimientos() {
       .order('fecha', { ascending: false })
       .order('created_at', { ascending: false });
 
-    if (refreshed) {
-      setMovimientos(refreshed.map(m => ({
-        ...m,
-        cuenta: cuentas.find(c => c.id === m.cuenta_id),
-        categoria: categorias.find(c => c.id === m.categoria_id),
-        subcategoria: m.subcategoria_id ? categorias.find(c => c.id === m.subcategoria_id) : null,
-      })) as MovimientoConRelaciones[]);
-    }
+    if (data) setRawMovimientos(data as Movimiento[]);
   };
 
   // Navigation
@@ -207,15 +190,16 @@ export function useMovimientos() {
       });
     } else {
       haptic.trigger('success');
-      const updatedMovimientos = movimientos.filter(m => m.id !== id);
-      setMovimientos(updatedMovimientos);
+
+      const deletedWasRecurrente = rawMovimientos.find(m => m.id === id)?.es_recurrente;
+      const updatedRaw = rawMovimientos.filter(m => m.id !== id);
+      setRawMovimientos(updatedRaw);
       toast({ title: 'Movimiento eliminado' });
 
       // Re-evaluate banner
       const isCurrentMonth = currentMonth === format(new Date(), 'yyyy-MM');
-      const deletedWasRecurrente = movimientos.find(m => m.id === id)?.es_recurrente;
       if (isCurrentMonth && deletedWasRecurrente) {
-        const stillHasRecurrentes = updatedMovimientos.some(m => m.es_recurrente);
+        const stillHasRecurrentes = updatedRaw.some(m => m.es_recurrente);
         if (!stillHasRecurrentes) {
           const { data: templates } = await supabase
             .from('gastos_recurrentes')
@@ -265,7 +249,7 @@ export function useMovimientos() {
       return;
     }
 
-    setMovimientos(prev => prev.filter(m => m.id !== movimiento.id));
+    setRawMovimientos(prev => prev.filter(m => m.id !== movimiento.id));
     haptic.trigger('success');
 
     toast({
@@ -309,18 +293,9 @@ export function useMovimientos() {
         return;
       }
 
-      const movimientoConRelaciones = {
-        ...updated,
-        cuenta: cuentas.find(c => c.id === updated.cuenta_id),
-        categoria: categorias.find(c => c.id === updated.categoria_id),
-        subcategoria: updated.subcategoria_id
-          ? categorias.find(c => c.id === updated.subcategoria_id)
-          : null
-      } as MovimientoConRelaciones;
-
-      setMovimientos(movimientos.map(m =>
-        m.id === editingMovimiento.id ? movimientoConRelaciones : m
-      ));
+      setRawMovimientos(prev =>
+        prev.map(m => m.id === editingMovimiento.id ? (updated as Movimiento) : m)
+      );
 
       toast({ title: 'Movimiento actualizado' });
     } else {
@@ -425,18 +400,20 @@ export function useMovimientos() {
     });
   };
 
-  const addCategoria = (cat: Categoria) => setCategorias(prev => [...prev, cat]);
+  const addCategoria = (cat: Categoria) => {
+    queryClient.setQueryData<Categoria[]>(
+      ['categorias', user?.id],
+      (old) => old ? [...old, cat] : [cat]
+    );
+  };
 
   return {
-    // Data
     movimientos,
     cuentas,
     categorias,
     loading,
     currentMonth,
     showRecurrenteBanner,
-
-    // Derived
     formattedMonth,
     categoriasParent,
     todasSubcategorias,
@@ -444,22 +421,16 @@ export function useMovimientos() {
     filteredMovimientos,
     totals,
     currency,
-
-    // Filters
     filtroCategoria,
     filtroSubcategoria,
     setFiltroCategoria,
     setFiltroSubcategoria,
-
-    // UI state (coupled to data operations)
     modalOpen,
     setModalOpen,
     editingMovimiento,
     deleteConfirm,
     setDeleteConfirm,
     setShowRecurrenteBanner,
-
-    // Actions
     navigateMonth,
     handleCreateMovimiento,
     handleEditMovimiento,
@@ -468,11 +439,7 @@ export function useMovimientos() {
     handleSaveMovimiento,
     handleGenerateRecurrentes,
     addCategoria,
-
-    // Haptics (needed by UI for SwipeableRow threshold)
     haptic,
-
-    // Auth data needed by UI
     profile,
   };
 }

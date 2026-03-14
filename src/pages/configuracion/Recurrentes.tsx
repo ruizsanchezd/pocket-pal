@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { GastoRecurrente, Cuenta, Categoria } from '@/types/database';
 import { GastoRecurrenteFormData } from '@/lib/validations';
+import { useCuentas, useCategorias } from '@/hooks/useStaticData';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 
@@ -56,10 +57,13 @@ export default function ConfigRecurrentes() {
   const isMobile = useIsMobile();
   const swipeDismissRecurrente = useSwipeDownToDismiss(() => setModalOpen(false));
 
+  // Cached static data from React Query
+  const { data: cuentas = [] as Cuenta[], isLoading: cuentasLoading } = useCuentas();
+  const { data: categorias = [] as Categoria[], isLoading: categoriasLoading } = useCategorias();
+
   const [gastos, setGastos] = useState<GastoRecurrenteConRelaciones[]>([]);
-  const [cuentas, setCuentas] = useState<Cuenta[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [gastosLoading, setGastosLoading] = useState(true);
+  const loading = cuentasLoading || categoriasLoading || gastosLoading;
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGasto, setEditingGasto] = useState<GastoRecurrenteConRelaciones | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -87,58 +91,37 @@ export default function ConfigRecurrentes() {
     };
   }, [modalOpen]);
 
-  // Fetch data
+  // Fetch gastos recurrentes (cuentas/categorias come from React Query cache)
   useEffect(() => {
-    if (!user) return;
-    
-    const fetchData = async () => {
-      setLoading(true);
-      
-      // Fetch accounts, categories and recurring expenses in parallel
-      const [
-        { data: cuentasData },
-        { data: categoriasData },
-        { data: gastosData }
-      ] = await Promise.all([
-        supabase
-          .from('cuentas')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('activa', true)
-          .order('orden'),
-        supabase
-          .from('categorias')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('orden'),
-        supabase
-          .from('gastos_recurrentes')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('concepto')
-      ]);
+    if (!user || cuentasLoading || categoriasLoading) return;
 
-      if (cuentasData) setCuentas(cuentasData as Cuenta[]);
-      if (categoriasData) setCategorias(categoriasData as Categoria[]);
+    const fetchGastos = async () => {
+      setGastosLoading(true);
+
+      const { data: gastosData } = await supabase
+        .from('gastos_recurrentes')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('concepto');
 
       if (gastosData) {
         const gastosConRelaciones = gastosData.map(g => ({
           ...g,
-          cuenta: cuentasData?.find(c => c.id === g.cuenta_id),
-          categoria: categoriasData?.find(c => c.id === g.categoria_id),
+          cuenta: cuentas.find(c => c.id === g.cuenta_id),
+          categoria: categorias.find(c => c.id === g.categoria_id),
           subcategoria: g.subcategoria_id
-            ? categoriasData?.find(c => c.id === g.subcategoria_id)
+            ? categorias.find(c => c.id === g.subcategoria_id)
             : null
         })) as GastoRecurrenteConRelaciones[];
 
         setGastos(gastosConRelaciones);
       }
-      
-      setLoading(false);
+
+      setGastosLoading(false);
     };
 
-    fetchData();
-  }, [user]);
+    fetchGastos();
+  }, [user, cuentas, categorias, cuentasLoading, categoriasLoading]);
 
   const handleCreate = () => {
     setEditingGasto(null);
