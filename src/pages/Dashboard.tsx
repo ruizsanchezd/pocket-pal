@@ -22,6 +22,7 @@ import {
 } from 'recharts';
 import { DistribucionSection } from '@/components/dashboard/DistribucionSection';
 import { useAutoSnapshot } from '@/hooks/useAutoSnapshot';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface PatrimonioData {
   mes: string;
@@ -492,6 +493,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Patrimonio chart */}
+            <ErrorBoundary>
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -536,10 +538,13 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+            </ErrorBoundary>
           </div>
 
           {/* Distribution Section */}
-          <DistribucionSection />
+          <ErrorBoundary>
+            <DistribucionSection />
+          </ErrorBoundary>
         </div>
       </MainLayout>
     </ProtectedRoute>

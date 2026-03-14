@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function Movimientos() {
   const {
@@ -171,6 +172,7 @@ export default function Movimientos() {
           />
 
           {/* Movements table */}
+          <ErrorBoundary>
           <Card>
             <CardHeader className="pb-3">
               <div className="flex flex-wrap items-center justify-between gap-5">
@@ -587,6 +589,7 @@ export default function Movimientos() {
               )}
             </CardContent>
           </Card>
+          </ErrorBoundary>
 
           {/* Totals */}
           {filteredMovimientos.length > 0 && (
