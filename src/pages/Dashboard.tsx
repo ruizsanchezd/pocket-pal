@@ -9,6 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Cuenta, CuentaConSaldo } from '@/types/database';
 import { Loader2, TrendingUp, TrendingDown, Wallet, PiggyBank, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
+// NOTE: useAccountBalances is not used here because Dashboard's balance computation
+// is intertwined with inversion-specific logic: it needs the raw movimientos array
+// (not just the sum) to separate `depositos` (positive movements) from the total,
+// which is required to compute `invertido` and `rendimiento` for each inversion account.
+// Extracting only the sum would force a second movimientos fetch for those accounts.
 import {
   LineChart,
   Line,
@@ -240,14 +246,7 @@ export default function Dashboard() {
     fetchData();
   }, [user]);
 
-  const formatCurrency = (amount: number) => {
-    const symbol = profile?.divisa_principal === 'USD' ? '$' : 
-                   profile?.divisa_principal === 'GBP' ? '£' : '€';
-    return `${amount.toLocaleString('es-ES', { 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    })}${symbol}`;
-  };
+  const currency = profile?.divisa_principal || 'EUR';
 
   // Group accounts by type
   const accountsByType = useMemo(() => {
@@ -295,7 +294,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(metrics.patrimonioTotal)}
+                  {formatCurrency(metrics.patrimonioTotal, currency)}
                 </div>
               </CardContent>
             </Card>
@@ -313,7 +312,7 @@ export default function Dashboard() {
                     "text-2xl font-bold",
                     metrics.balanceMes >= 0 ? "text-green-600" : "text-destructive"
                   )}>
-                    {metrics.balanceMes >= 0 ? '+' : ''}{formatCurrency(metrics.balanceMes)}
+                    {metrics.balanceMes >= 0 ? '+' : ''}{formatCurrency(metrics.balanceMes, currency)}
                   </div>
                   {metrics.tasaAhorro !== null && (
                     <span className={cn(
@@ -348,7 +347,7 @@ export default function Dashboard() {
                     "text-2xl font-bold",
                     metrics.variacion >= 0 ? "text-green-600" : "text-destructive"
                   )}>
-                    {metrics.variacion >= 0 ? '+' : ''}{formatCurrency(metrics.variacion)}
+                    {metrics.variacion >= 0 ? '+' : ''}{formatCurrency(metrics.variacion, currency)}
                   </div>
                 )}
               </CardContent>
@@ -369,7 +368,7 @@ export default function Dashboard() {
                     "text-2xl font-bold",
                     metrics.ahorro6Meses >= 0 ? "text-green-600" : "text-destructive"
                   )}>
-                    {metrics.ahorro6Meses >= 0 ? '+' : ''}{formatCurrency(metrics.ahorro6Meses)}
+                    {metrics.ahorro6Meses >= 0 ? '+' : ''}{formatCurrency(metrics.ahorro6Meses, currency)}
                   </div>
                 )}
               </CardContent>
@@ -406,7 +405,7 @@ export default function Dashboard() {
                             <span>{cuenta.nombre}</span>
                           </div>
                           <span className="font-medium">
-                            {formatCurrency(cuenta.saldo_actual)}
+                            {formatCurrency(cuenta.saldo_actual, currency)}
                           </span>
                         </div>
                       ))}
@@ -435,17 +434,17 @@ export default function Dashboard() {
                               <span>{cuenta.nombre}</span>
                             </div>
                             <span className="font-medium">
-                              {formatCurrency(cuenta.saldo_actual)}
+                              {formatCurrency(cuenta.saldo_actual, currency)}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 ml-6">
-                            Invertido: {formatCurrency(cuenta.invertido || 0)}
+                            Invertido: {formatCurrency(cuenta.invertido || 0, currency)}
                             {' • '}
                             Rendimiento: <span className={cn(
                               cuenta.rendimiento && cuenta.rendimiento >= 0 ? 'text-green-600' : 'text-destructive'
                             )}>
                               {cuenta.rendimiento && cuenta.rendimiento >= 0 ? '+' : ''}
-                              {formatCurrency(cuenta.rendimiento || 0)}
+                              {formatCurrency(cuenta.rendimiento || 0, currency)}
                             </span>
                           </p>
                         </div>
@@ -475,11 +474,11 @@ export default function Dashboard() {
                               <span>{cuenta.nombre}</span>
                             </div>
                             <span className="font-medium">
-                              {formatCurrency(cuenta.saldo_actual)}
+                              {formatCurrency(cuenta.saldo_actual, currency)}
                             </span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1 ml-6">
-                            Gastado este mes: {formatCurrency(cuenta.gastos_mes || 0)}
+                            Gastado este mes: {formatCurrency(cuenta.gastos_mes || 0, currency)}
                           </p>
                         </div>
                       ))}
@@ -492,7 +491,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">TOTAL PATRIMONIO</span>
                     <span className="text-xl font-bold">
-                      {formatCurrency(metrics.patrimonioTotal)}
+                      {formatCurrency(metrics.patrimonioTotal, currency)}
                     </span>
                   </div>
                 </div>
@@ -525,7 +524,7 @@ export default function Dashboard() {
                         width={28}
                       />
                       <Tooltip 
-                        formatter={(value: number) => [formatCurrency(value), 'Patrimonio']}
+                        formatter={(value: number) => [formatCurrency(value, currency), 'Patrimonio']}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--background))',
                           border: '1px solid hsl(var(--border))',

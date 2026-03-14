@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { Movimiento, Categoria } from '@/types/database';
+import { formatCurrency } from '@/lib/format';
 import {
   BarChart,
   Bar,
@@ -174,15 +175,7 @@ export function DistribucionSection() {
     return sorted;
   }, [movimientos, categorias, tipoMovimiento]);
 
-  const formatCurrency = (amount: number) => {
-    const symbol = profile?.divisa_principal === 'USD' ? '$' :
-                   profile?.divisa_principal === 'GBP' ? '£' : '€';
-    const abs = Math.abs(amount);
-    return `${abs.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    })}${symbol}`;
-  };
+  const currency = profile?.divisa_principal || 'EUR';
 
   // Get color for bar: in 'todos' mode use value sign; otherwise use movement type
   const getBarColor = (value: number) => {
@@ -319,7 +312,7 @@ export function DistribucionSection() {
                           width={28}
                         />
                         <Tooltip
-                          formatter={(value: number) => [formatCurrency(value), 'Total']}
+                          formatter={(value: number) => [formatCurrency(value, currency, false, true), 'Total']}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
                             border: '1px solid hsl(var(--border))',
@@ -368,7 +361,7 @@ export function DistribucionSection() {
                           width={28}
                         />
                         <Tooltip
-                          formatter={(value: number) => [formatCurrency(value), 'Total']}
+                          formatter={(value: number) => [formatCurrency(value, currency, false, true), 'Total']}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
                             border: '1px solid hsl(var(--border))',

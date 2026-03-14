@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { CuentaFormData } from '@/lib/validations';
+import { formatCurrency } from '@/lib/format';
+import { useAccountBalances } from '@/hooks/useAccountBalances';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 import { format } from 'date-fns';
@@ -57,63 +59,52 @@ export default function ConfigCuentas() {
   const isMobile = useIsMobile();
   const swipeDismissCuenta = useSwipeDownToDismiss(() => setModalOpen(false));
 
-  const [cuentas, setCuentas] = useState<CuentaConConfig[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Raw data from DB — balances computed separately by the hook
+  const [rawCuentas, setRawCuentas] = useState<Cuenta[]>([]);
+  const [monederoConfigs, setMonederoConfigs] = useState<CuentaMonederoConfig[]>([]);
+  const [rawLoading, setRawLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCuenta, setEditingCuenta] = useState<CuentaConConfig | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<CuentaConConfig | null>(null);
 
-  // Calculate balance for an account
-  const calculateBalance = async (cuenta: Cuenta): Promise<number> => {
-    const { data: movimientos } = await supabase
-      .from('movimientos')
-      .select('cantidad')
-      .eq('cuenta_id', cuenta.id);
+  const { balances, loading: balancesLoading } = useAccountBalances(rawCuentas);
+  const loading = rawLoading || balancesLoading;
 
-    const sumaMovimientos = movimientos?.reduce(
-      (sum, m) => sum + Number(m.cantidad), 
-      0
-    ) || 0;
-
-    return Number(cuenta.saldo_inicial) + sumaMovimientos;
-  };
+  // Combine raw cuentas with hook-computed balances and monedero config
+  const cuentas = useMemo<CuentaConConfig[]>(
+    () =>
+      rawCuentas.map((cuenta) => ({
+        ...cuenta,
+        saldo_actual: balances[cuenta.id],
+        monedero_config: monederoConfigs.find((c) => c.cuenta_id === cuenta.id) ?? null,
+      })),
+    [rawCuentas, balances, monederoConfigs]
+  );
 
   // Fetch accounts
   useEffect(() => {
     if (!user) return;
-    
+
     const fetchCuentas = async () => {
-      setLoading(true);
-      
+      setRawLoading(true);
+
       const { data: cuentasData } = await supabase
         .from('cuentas')
         .select('*')
         .eq('user_id', user.id)
         .order('orden');
-      
+
       if (cuentasData) {
-        // Fetch monedero configs
         const { data: configsData } = await supabase
           .from('cuentas_monedero_config')
           .select('*')
           .eq('user_id', user.id);
-        
-        // Calculate balances for all accounts
-        const cuentasConConfig = await Promise.all(
-          cuentasData.map(async (cuenta) => {
-            const saldo_actual = await calculateBalance(cuenta);
-            return {
-              ...cuenta,
-              monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null,
-              saldo_actual
-            } as CuentaConConfig;
-          })
-        );
-        
-        setCuentas(cuentasConConfig);
+
+        setRawCuentas(cuentasData as Cuenta[]);
+        setMonederoConfigs((configsData as CuentaMonederoConfig[]) ?? []);
       }
-      
-      setLoading(false);
+
+      setRawLoading(false);
     };
 
     fetchCuentas();
@@ -269,32 +260,21 @@ export default function ConfigCuentas() {
         toast({ title: 'Cuenta creada' });
       }
 
-      // Refresh list
+      // Refresh list — setting rawCuentas triggers useAccountBalances to recompute balances
       const { data: cuentasData } = await supabase
         .from('cuentas')
         .select('*')
         .eq('user_id', user.id)
         .order('orden');
-      
+
       if (cuentasData) {
         const { data: configsData } = await supabase
           .from('cuentas_monedero_config')
           .select('*')
           .eq('user_id', user.id);
-        
-        // Calculate balances for all accounts
-        const cuentasConConfig = await Promise.all(
-          cuentasData.map(async (cuenta) => {
-            const saldo_actual = await calculateBalance(cuenta);
-            return {
-              ...cuenta,
-              monedero_config: configsData?.find(c => c.cuenta_id === cuenta.id) || null,
-              saldo_actual
-            } as CuentaConConfig;
-          })
-        );
-        
-        setCuentas(cuentasConConfig);
+
+        setRawCuentas(cuentasData as Cuenta[]);
+        setMonederoConfigs((configsData as CuentaMonederoConfig[]) ?? []);
       }
 
       setModalOpen(false);
@@ -327,7 +307,7 @@ export default function ConfigCuentas() {
     }
 
     haptic.trigger('light');
-    setCuentas(cuentas.map(c =>
+    setRawCuentas(rawCuentas.map(c =>
       c.id === cuenta.id ? { ...c, activa: !c.activa } : c
     ));
   };
@@ -381,19 +361,9 @@ export default function ConfigCuentas() {
     }
 
     haptic.trigger('success');
-    setCuentas(cuentas.filter(c => c.id !== cuenta.id));
+    setRawCuentas(rawCuentas.filter(c => c.id !== cuenta.id));
     setDeleteConfirm(null);
     toast({ title: 'Cuenta eliminada' });
-  };
-
-  const formatCurrency = (amount: number, currency: string): string => {
-    const formatter = new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: currency || 'EUR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    return formatter.format(amount);
   };
 
   // Group accounts by type

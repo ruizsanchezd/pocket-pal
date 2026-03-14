@@ -59,6 +59,7 @@ import {
 import { MovimientoConRelaciones, Cuenta, Categoria } from '@/types/database';
 import { MovimientoFormData } from '@/lib/validations';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/format';
 
 interface MovimientoInsert {
   user_id: string;
@@ -540,14 +541,7 @@ export default function Movimientos() {
     });
   };
 
-  const formatCurrency = (amount: number) => {
-    const symbol = profile?.divisa_principal === 'USD' ? '$' : 
-                   profile?.divisa_principal === 'GBP' ? '£' : '€';
-    return `${amount >= 0 ? '+' : ''}${amount.toLocaleString('es-ES', { 
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2 
-    })}${symbol}`;
-  };
+  const currency = profile?.divisa_principal || 'EUR';
 
   return (
     <ProtectedRoute>
@@ -940,7 +934,7 @@ export default function Movimientos() {
                             "font-semibold text-sm shrink-0",
                             movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
                           )}>
-                            {formatCurrency(Number(movimiento.cantidad))}
+                            {formatCurrency(Number(movimiento.cantidad), currency, true)}
                           </span>
                         </div>
                       </SwipeableRow>
@@ -970,7 +964,7 @@ export default function Movimientos() {
                             "text-right font-medium pr-8",
                             movimiento.cantidad > 0 ? "text-green-600" : "text-destructive"
                           )}>
-                            {formatCurrency(Number(movimiento.cantidad))}
+                            {formatCurrency(Number(movimiento.cantidad), currency, true)}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
