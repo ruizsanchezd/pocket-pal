@@ -308,12 +308,15 @@ export default function ConfigCategorias() {
 
           {/* Create Modal */}
           {isMobile ? (
-            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false}>
-              <DrawerContent className="flex flex-col" style={{ height: '75dvh', maxHeight: '75dvh' }}>
-                <DrawerHeader className="text-left px-6 pt-4 pb-2 shrink-0">
+            <Drawer open={modalOpen} onOpenChange={setModalOpen} shouldScaleBackground={false} repositionInputs={false}>
+              <DrawerContent
+                className="flex flex-col px-6 pb-6 pt-2"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <DrawerHeader className="text-left px-0 pb-2 shrink-0">
                   <DrawerTitle>Nueva Categoría</DrawerTitle>
                 </DrawerHeader>
-                <div ref={swipeDismissCategoria} className="flex-1 overflow-y-auto px-6 pb-6" data-vaul-no-drag>
+                <div ref={swipeDismissCategoria} data-vaul-no-drag>
                   <CategoriaForm
                     tipo={activeTab}
                     onSubmit={handleSave}

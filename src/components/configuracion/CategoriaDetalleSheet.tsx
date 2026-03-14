@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
 import { useWebHaptics } from 'web-haptics/react';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
 import { Categoria, CategoriaConHijos, CategoriaFormData } from '@/types/database';
 
 const EDIT_FORM_ID = 'categoria-edit-form';
@@ -61,10 +61,6 @@ export function CategoriaDetalleSheet({
   const [subcatModalOpen, setSubcatModalOpen] = useState(false);
   const [deleteSubcatConfirm, setDeleteSubcatConfirm] = useState<Categoria | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [drawerExpanded, setDrawerExpanded] = useState(false);
-  const touchStartY = useRef(0);
-  const scrollTopAtTouchStart = useRef(0);
-  const collapseTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Native-listener refs for swipe-down-to-dismiss (bypass React event delegation)
   const swipeDismissMain = useSwipeDownToDismiss(onClose);
@@ -72,25 +68,6 @@ export function CategoriaDetalleSheet({
     setSubcatModalOpen(false);
     setEditingSubcat(null);
   });
-
-  const handleContentTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    scrollTopAtTouchStart.current = (e.currentTarget as HTMLDivElement).scrollTop;
-  };
-
-  const handleContentTouchMove = (e: React.TouchEvent) => {
-    const delta = touchStartY.current - e.touches[0].clientY; // positivo = dedo sube
-    if (!drawerExpanded && delta > 10) {
-      setDrawerExpanded(true);
-    } else if (drawerExpanded && delta < -10 && scrollTopAtTouchStart.current === 0) {
-      // Solo colapsa si el gesto empezó en el top, no si venía de scrollear contenido
-      clearTimeout(collapseTimer.current);
-      setDrawerExpanded(false);
-    } else if (!drawerExpanded && delta < -60 && scrollTopAtTouchStart.current === 0) {
-      // En 85dvh + swipe down desde el top → cerrar drawer
-      onClose();
-    }
-  };
 
 
   useEffect(() => {
@@ -272,14 +249,11 @@ export function CategoriaDetalleSheet({
   return (
     <>
       {isMobile ? (
-        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) { onClose(); setDrawerExpanded(false); } }} shouldScaleBackground={false}>
+        <Drawer open={!!categoria} onOpenChange={(open) => { if (!open) onClose(); }} shouldScaleBackground={false} repositionInputs={false}>
           <DrawerContent
-            className={cn("flex flex-col", drawerExpanded && "rounded-t-none")}
-            style={{
-              height: drawerExpanded ? '100dvh' : '85dvh',
-              maxHeight: drawerExpanded ? '100dvh' : '85dvh',
-              transition: 'height 220ms ease-out, max-height 220ms ease-out',
-            }}
+            className="flex flex-col"
+            style={{ height: '85dvh', maxHeight: '85dvh' }}
+            onOpenAutoFocus={(e) => e.preventDefault()}
           >
             {categoria && (
               <>
@@ -293,8 +267,6 @@ export function CategoriaDetalleSheet({
                   ref={swipeDismissMain}
                   className="flex-1 overflow-y-auto px-6 pb-4 flex flex-col gap-6"
                   data-vaul-no-drag
-                  onTouchStart={handleContentTouchStart}
-                  onTouchMove={handleContentTouchMove}
                 >
                   {bodyContent}
                 </div>
@@ -335,7 +307,11 @@ export function CategoriaDetalleSheet({
           onOpenChange={(open) => { if (!open) { setSubcatModalOpen(false); setEditingSubcat(null); } }}
           repositionInputs={false}
         >
-          <DrawerContent className="flex flex-col px-6 pb-6 pt-2">
+          <DrawerContent
+            className="flex flex-col px-6 pb-6 pt-2"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
             <DrawerHeader className="text-left px-0 pb-4">
               <DrawerTitle>{editingSubcat ? 'Editar subcategoría' : 'Nueva subcategoría'}</DrawerTitle>
             </DrawerHeader>
@@ -346,7 +322,6 @@ export function CategoriaDetalleSheet({
                   initialData={editingSubcat || undefined}
                   tipo={categoria.tipo}
                   isSubcategoria={true}
-                  autoFocusNombre
                   onSubmit={handleSaveSubcat}
                   onCancel={() => { setSubcatModalOpen(false); setEditingSubcat(null); }}
                 />
