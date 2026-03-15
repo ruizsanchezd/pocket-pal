@@ -700,7 +700,7 @@ export default function Movimientos() {
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 py-3">
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 pt-3 pb-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
           <Button className="w-full h-12 text-base" onClick={handleCreateMovimiento}>
             <Plus className="mr-2 h-5 w-5" />
             Nuevo Movimiento
