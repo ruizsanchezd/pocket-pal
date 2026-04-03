@@ -55,7 +55,7 @@ import { formatCurrency } from '@/lib/format';
 import { useAccountBalances } from '@/hooks/useAccountBalances';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
-import { format, subMonths } from 'date-fns';
+import { format, subMonths, differenceInMonths, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface CuentaConConfig extends Cuenta {
@@ -156,8 +156,19 @@ export default function ConfigCuentas() {
             0
           ) || 0;
 
-          // New saldo_inicial = desired balance - sum of movements
-          const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos;
+          // For monedero accounts, recargaAcumulada is added on top by the Dashboard,
+          // so we need to subtract it here so the formula resolves to the user's intended balance.
+          let recargaAcumulada = 0;
+          if (editingCuenta.tipo === 'monedero' && editingCuenta.monedero_config && editingCuenta.created_at) {
+            const meses = differenceInMonths(
+              startOfMonth(new Date()),
+              startOfMonth(new Date(editingCuenta.created_at))
+            );
+            recargaAcumulada = editingCuenta.monedero_config.recarga_mensual * meses;
+          }
+
+          // New saldo_inicial = desired balance - sum of movements - recargaAcumulada
+          const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos - recargaAcumulada;
 
           // Update account with new saldo_inicial
           const { error: updateError } = await supabase
