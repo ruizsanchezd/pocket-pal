@@ -35,6 +35,17 @@ export function useAutoSnapshot(userId: string | undefined) {
           return; // Already generated
         }
 
+        // Only generate historical snapshots if the user has movements before the current month.
+        // If there are none, the user just started and there's no meaningful history to snapshot.
+        const { data: anyMovements } = await supabase
+          .from('movimientos')
+          .select('id')
+          .eq('user_id', userId)
+          .lt('fecha', currentMonthStart)
+          .limit(1);
+
+        if (!anyMovements || anyMovements.length === 0) return;
+
         // Fetch all active accounts
         const { data: cuentas } = await supabase
           .from('cuentas')
