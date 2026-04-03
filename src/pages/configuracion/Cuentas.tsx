@@ -91,11 +91,24 @@ export default function ConfigCuentas() {
   // Combine raw cuentas with hook-computed balances and monedero config
   const cuentas = useMemo<CuentaConConfig[]>(
     () =>
-      rawCuentas.map((cuenta) => ({
-        ...cuenta,
-        saldo_actual: balances[cuenta.id],
-        monedero_config: monederoConfigs.find((c) => c.cuenta_id === cuenta.id) ?? null,
-      })),
+      rawCuentas.map((cuenta) => {
+        const monedero_config = monederoConfigs.find((c) => c.cuenta_id === cuenta.id) ?? null;
+
+        let recargaAcumulada = 0;
+        if (cuenta.tipo === 'monedero' && monedero_config && cuenta.created_at) {
+          const meses = differenceInMonths(
+            startOfMonth(new Date()),
+            startOfMonth(new Date(cuenta.created_at))
+          );
+          recargaAcumulada = monedero_config.recarga_mensual * meses;
+        }
+
+        return {
+          ...cuenta,
+          saldo_actual: (balances[cuenta.id] ?? 0) + recargaAcumulada,
+          monedero_config,
+        };
+      }),
     [rawCuentas, balances, monederoConfigs]
   );
 
