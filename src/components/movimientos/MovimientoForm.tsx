@@ -13,13 +13,7 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+import { DrawerSelect } from '@/components/ui/drawer-select';
 import {
   Popover,
   PopoverContent,
@@ -248,26 +242,18 @@ export function MovimientoForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Cuenta *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una cuenta" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {cuentas.map((cuenta) => (
-                    <SelectItem key={cuenta.id} value={cuenta.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3 rounded-full" 
-                          style={{ backgroundColor: cuenta.color }}
-                        />
-                        {cuenta.nombre}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <DrawerSelect
+                  options={cuentas.map((cuenta) => ({
+                    value: cuenta.id,
+                    label: cuenta.nombre,
+                    color: cuenta.color
+                  }))}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  placeholder="Selecciona una cuenta"
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

@@ -51,8 +51,12 @@ export function CreatableSelect({
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
   const swipeDismissRef = useSwipeDownToDismiss(() => setOpen(false));
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const collapseTimer = React.useRef<ReturnType<typeof setTimeout>>();
+  const [needsFullHeight, setNeedsFullHeight] = React.useState(false);
+  const listRef = React.useRef<HTMLDivElement>(null);
+  const setScrollableRef = React.useCallback((node: HTMLDivElement | null) => {
+    (listRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    swipeDismissRef(node);
+  }, [swipeDismissRef]);
   const [isInlineCreating, setIsInlineCreating] = React.useState(false);
   const [createValue, setCreateValue] = React.useState("");
   const [isSaving, setIsSaving] = React.useState(false);
@@ -105,23 +109,22 @@ export function CreatableSelect({
     setError("");
   };
 
+  React.useEffect(() => {
+    if (!open) return;
+    requestAnimationFrame(() => {
+      if (listRef.current) {
+        setNeedsFullHeight(listRef.current.scrollHeight > listRef.current.clientHeight);
+      }
+    });
+  }, [open]);
+
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
       setIsInlineCreating(false);
       setCreateValue("");
       setError("");
-      setIsExpanded(false);
-    }
-  };
-
-  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    if (scrollTop > 0) {
-      clearTimeout(collapseTimer.current);
-      setIsExpanded(true);
-    } else {
-      collapseTimer.current = setTimeout(() => setIsExpanded(false), 80);
+      setNeedsFullHeight(false);
     }
   };
 
@@ -205,17 +208,16 @@ export function CreatableSelect({
       <Drawer open={open} onOpenChange={handleOpenChange} shouldScaleBackground={false}>
         <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
         <DrawerContent
-          className={cn(isExpanded && "rounded-t-none")}
+          className={cn(needsFullHeight && "rounded-t-none")}
           style={{
-            height: isExpanded ? '100dvh' : '85dvh',
-            maxHeight: isExpanded ? '100dvh' : '85dvh',
-            transition: isInlineCreating ? 'none' : 'height 180ms ease-in-out, max-height 180ms ease-in-out, border-top-left-radius 180ms ease-in-out, border-top-right-radius 180ms ease-in-out',
+            height: needsFullHeight ? '100dvh' : '85dvh',
+            maxHeight: needsFullHeight ? '100dvh' : '85dvh',
           }}
         >
           <DrawerHeader>
             <DrawerTitle>{placeholder}</DrawerTitle>
           </DrawerHeader>
-          <div ref={swipeDismissRef} className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag onScroll={handleListScroll}>
+          <div ref={setScrollableRef} className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-4 pb-8" data-vaul-no-drag>
             {allowNone && (
               <button
                 className="w-full text-left py-3 px-2 rounded-lg text-muted-foreground italic flex items-center gap-3 active:bg-accent"
