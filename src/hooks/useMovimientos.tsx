@@ -65,6 +65,7 @@ export function useMovimientos() {
   // Filters
   const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
   const [filtroSubcategoria, setFiltroSubcategoria] = useState<string>('__all__');
+  const [filtroBusqueda, setFiltroBusqueda] = useState<string>('');
 
   // Derived data
   const formattedMonth = useMemo(() => {
@@ -82,6 +83,9 @@ export function useMovimientos() {
     return todasSubcategorias;
   }, [todasSubcategorias, filtroCategoria]);
 
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+
   const filteredMovimientos = useMemo(() => {
     let filtered = movimientos;
     if (filtroCategoria !== '__all__') {
@@ -90,8 +94,13 @@ export function useMovimientos() {
     if (filtroSubcategoria !== '__all__') {
       filtered = filtered.filter(m => m.subcategoria_id === filtroSubcategoria);
     }
+    const q = filtroBusqueda.trim();
+    if (q) {
+      const nq = normalize(q);
+      filtered = filtered.filter(m => normalize(m.concepto).includes(nq));
+    }
     return filtered;
-  }, [movimientos, filtroCategoria, filtroSubcategoria]);
+  }, [movimientos, filtroCategoria, filtroSubcategoria, filtroBusqueda]);
 
   const totals = useMemo(() => {
     const ingresos = filteredMovimientos
@@ -451,8 +460,10 @@ export function useMovimientos() {
     currency,
     filtroCategoria,
     filtroSubcategoria,
+    filtroBusqueda,
     setFiltroCategoria,
     setFiltroSubcategoria,
+    setFiltroBusqueda,
     modalOpen,
     setModalOpen,
     editingMovimiento,

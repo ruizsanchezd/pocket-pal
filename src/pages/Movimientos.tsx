@@ -50,7 +50,10 @@ import {
   Loader2,
   Check,
   ChevronDown,
+  Search,
+  X,
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -90,9 +93,24 @@ export default function Movimientos() {
     haptic,
     profile,
     movimientos,
+    filtroBusqueda,
+    setFiltroBusqueda,
   } = useMovimientos();
 
   const isMobile = useIsMobile();
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 50);
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setFiltroBusqueda('');
+  };
 
   // Drawer presentation state (UI-only)
   const [drawerCategoriaOpen, setDrawerCategoriaOpen] = useState(false);
@@ -186,7 +204,40 @@ export default function Movimientos() {
                 {/* Filtros */}
                 {movimientos.length > 0 && (
                   <div className="flex flex-row gap-2 w-full sm:w-auto items-center">
-                    {isMobile ? (
+                    {/* Botón buscador */}
+                    {!searchOpen && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className={cn("shrink-0 h-10 w-10", filtroBusqueda && "text-primary")}
+                        onClick={openSearch}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
+                    )}
+
+                    {/* Input de búsqueda (reemplaza los filtros en móvil, se añade a la izquierda en desktop) */}
+                    {searchOpen && (
+                      <div className={cn("flex items-center gap-2", isMobile ? "flex-1" : "w-[260px]")}>
+                        <div className="relative flex-1">
+                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                          <Input
+                            ref={searchInputRef}
+                            value={filtroBusqueda}
+                            onChange={e => setFiltroBusqueda(e.target.value)}
+                            onKeyDown={e => e.key === 'Escape' && closeSearch()}
+                            placeholder="Buscar concepto…"
+                            className="pl-8 h-10 text-sm"
+                          />
+                        </div>
+                        <Button variant="ghost" size="icon" className="shrink-0 h-10 w-10" onClick={closeSearch}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Filtros de categoría: ocultos en móvil cuando el buscador está abierto */}
+                    {(!searchOpen || !isMobile) && (isMobile ? (
                       <>
                         {/* Mobile: Drawer para categoría */}
                         <button
@@ -437,7 +488,7 @@ export default function Movimientos() {
                           </SelectContent>
                         </Select>
                       </>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>
