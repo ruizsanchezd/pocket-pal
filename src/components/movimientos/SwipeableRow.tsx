@@ -1,13 +1,14 @@
 import { useRef } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, CopyPlus } from 'lucide-react';
 
 interface SwipeableRowProps {
   children: React.ReactNode;
   onDelete: () => void;
+  onDuplicate: () => void;
   onThresholdReached?: () => void;
 }
 
-export function SwipeableRow({ children, onDelete, onThresholdReached }: SwipeableRowProps) {
+export function SwipeableRow({ children, onDelete, onDuplicate, onThresholdReached }: SwipeableRowProps) {
   const startX = useRef(0);
   const startY = useRef(0);
   const currentOffset = useRef(0);
@@ -15,15 +16,27 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
   const directionLocked = useRef<'horizontal' | 'vertical' | null>(null);
   const thresholdFired = useRef(false);
   const innerRef = useRef<HTMLDivElement>(null);
-  const bgRef = useRef<HTMLDivElement>(null);
+  const bgDeleteRef = useRef<HTMLDivElement>(null);
+  const bgDuplicateRef = useRef<HTMLDivElement>(null);
 
-  const THRESHOLD = -80;
+  const DELETE_THRESHOLD = -80;
+  const DUPLICATE_THRESHOLD = 80;
 
   const applyOffset = (offset: number, animated: boolean) => {
-    if (!innerRef.current || !bgRef.current) return;
+    if (!innerRef.current || !bgDeleteRef.current || !bgDuplicateRef.current) return;
     innerRef.current.style.transition = animated ? 'transform 200ms ease-out' : 'none';
     innerRef.current.style.transform = `translateX(${offset}px)`;
-    bgRef.current.style.opacity = String(Math.min(1, Math.abs(offset) / Math.abs(THRESHOLD)));
+
+    if (offset < 0) {
+      bgDeleteRef.current.style.opacity = String(Math.min(1, Math.abs(offset) / Math.abs(DELETE_THRESHOLD)));
+      bgDuplicateRef.current.style.opacity = '0';
+    } else if (offset > 0) {
+      bgDuplicateRef.current.style.opacity = String(Math.min(1, offset / DUPLICATE_THRESHOLD));
+      bgDeleteRef.current.style.opacity = '0';
+    } else {
+      bgDeleteRef.current.style.opacity = '0';
+      bgDuplicateRef.current.style.opacity = '0';
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -56,15 +69,16 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
 
     e.preventDefault();
 
-    const offset = Math.min(0, deltaX);
+    const offset = Math.max(-150, Math.min(150, deltaX));
     currentOffset.current = offset;
     applyOffset(offset, false);
 
-    if (offset <= THRESHOLD && !thresholdFired.current) {
+    const absOffset = Math.abs(offset);
+    if (absOffset >= Math.min(Math.abs(DELETE_THRESHOLD), DUPLICATE_THRESHOLD) && !thresholdFired.current) {
       thresholdFired.current = true;
       onThresholdReached?.();
     }
-    if (offset > THRESHOLD && thresholdFired.current) {
+    if (absOffset < Math.min(Math.abs(DELETE_THRESHOLD), DUPLICATE_THRESHOLD) && thresholdFired.current) {
       thresholdFired.current = false;
     }
   };
@@ -73,8 +87,7 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
     if (!isDragging.current) return;
     isDragging.current = false;
 
-    if (currentOffset.current <= THRESHOLD) {
-      // Animate out fully then delete
+    if (currentOffset.current <= DELETE_THRESHOLD) {
       if (innerRef.current) {
         innerRef.current.style.transition = 'transform 200ms ease-out';
         innerRef.current.style.transform = `translateX(-100%)`;
@@ -82,8 +95,13 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
       setTimeout(() => {
         onDelete();
       }, 200);
+    } else if (currentOffset.current >= DUPLICATE_THRESHOLD) {
+      applyOffset(0, true);
+      thresholdFired.current = false;
+      setTimeout(() => {
+        onDuplicate();
+      }, 200);
     } else {
-      // Spring back
       applyOffset(0, true);
       thresholdFired.current = false;
     }
@@ -91,9 +109,17 @@ export function SwipeableRow({ children, onDelete, onThresholdReached }: Swipeab
 
   return (
     <div className="relative overflow-hidden">
-      {/* Red background */}
+      {/* Green background — swipe right to duplicate */}
       <div
-        ref={bgRef}
+        ref={bgDuplicateRef}
+        className="absolute inset-y-0 left-0 w-full bg-green-500 flex items-center justify-start px-6 opacity-0"
+        aria-hidden="true"
+      >
+        <CopyPlus className="h-5 w-5 text-white" />
+      </div>
+      {/* Red background — swipe left to delete */}
+      <div
+        ref={bgDeleteRef}
         className="absolute inset-y-0 right-0 w-full bg-destructive flex items-center justify-end px-6 opacity-0"
         aria-hidden="true"
       >

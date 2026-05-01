@@ -45,6 +45,7 @@ import {
   ChevronRight,
   Plus,
   Trash2,
+  CopyPlus,
   Receipt,
   Loader2,
   Check,
@@ -81,6 +82,7 @@ export default function Movimientos() {
     handleCreateMovimiento,
     handleEditMovimiento,
     handleDeleteMovimiento,
+    handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
     handleGenerateRecurrentes,
@@ -463,6 +465,7 @@ export default function Movimientos() {
                       <SwipeableRow
                         key={movimiento.id}
                         onDelete={() => handleSwipeDelete(movimiento)}
+                        onDuplicate={() => handleDuplicateMovimiento(movimiento)}
                         onThresholdReached={() => haptic.trigger('warning')}
                       >
                         <div
@@ -569,7 +572,15 @@ export default function Movimientos() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground"
+                                onClick={(e) => { e.stopPropagation(); handleDuplicateMovimiento(movimiento); }}
+                              >
+                                <CopyPlus className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"

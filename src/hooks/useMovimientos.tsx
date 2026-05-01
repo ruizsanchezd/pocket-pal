@@ -238,6 +238,34 @@ export function useMovimientos() {
     toast({ title: 'Movimiento restaurado' });
   };
 
+  const handleDuplicateMovimiento = async (movimiento: MovimientoConRelaciones) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('movimientos')
+      .insert({
+        user_id: movimiento.user_id,
+        fecha: movimiento.fecha,
+        concepto: movimiento.concepto,
+        cantidad: movimiento.cantidad,
+        cuenta_id: movimiento.cuenta_id,
+        categoria_id: movimiento.categoria_id,
+        subcategoria_id: movimiento.subcategoria_id,
+        notas: movimiento.notas,
+        mes_referencia: movimiento.mes_referencia,
+        es_recurrente: false,
+      });
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo duplicar el movimiento' });
+      return;
+    }
+
+    haptic.trigger('success');
+    await refetchMovimientos();
+    toast({ title: 'Movimiento duplicado' });
+  };
+
   const handleSwipeDelete = async (movimiento: MovimientoConRelaciones) => {
     const { error } = await supabase
       .from('movimientos')
@@ -435,6 +463,7 @@ export function useMovimientos() {
     handleCreateMovimiento,
     handleEditMovimiento,
     handleDeleteMovimiento,
+    handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
     handleGenerateRecurrentes,
