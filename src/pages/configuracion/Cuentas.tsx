@@ -314,7 +314,16 @@ export default function ConfigCuentas() {
               .update({ recarga_mensual: data.recarga_mensual })
               .eq('id', editingCuenta.monedero_config.id);
 
-            if (data.recarga_mensual !== editingCuenta.monedero_config.recarga_mensual) {
+            const { data: existingAuto } = await supabase
+              .from('gastos_recurrentes')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('auto_generado_cuenta_id', editingCuenta.id)
+              .maybeSingle();
+
+            if (!existingAuto) {
+              await crearAutoRecurrente(user.id, editingCuenta.id, data.nombre, data.recarga_mensual);
+            } else if (data.recarga_mensual !== editingCuenta.monedero_config.recarga_mensual) {
               await actualizarAutoRecurrente(user.id, editingCuenta.id, data.recarga_mensual);
             }
           } else {
