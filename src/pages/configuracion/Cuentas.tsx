@@ -58,6 +58,46 @@ import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHea
 import { format, subMonths, differenceInMonths, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+async function crearAutoRecurrente(userId: string, cuentaId: string, cuentaNombre: string, recargaMensual: number) {
+  const { data: cats } = await supabase
+    .from('categorias')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('tipo', 'ingreso')
+    .is('parent_id', null)
+    .limit(1);
+
+  const categoriaId = cats?.[0]?.id;
+  if (!categoriaId) return false;
+
+  await supabase.from('gastos_recurrentes').insert({
+    user_id: userId,
+    concepto: `Recarga ${cuentaNombre}`,
+    cantidad: recargaMensual,
+    dia_del_mes: 1,
+    cuenta_id: cuentaId,
+    categoria_id: categoriaId,
+    auto_generado_cuenta_id: cuentaId,
+  });
+  return true;
+}
+
+async function actualizarAutoRecurrente(userId: string, cuentaId: string, nuevaCantidad: number) {
+  await supabase
+    .from('gastos_recurrentes')
+    .update({ cantidad: nuevaCantidad })
+    .eq('user_id', userId)
+    .eq('auto_generado_cuenta_id', cuentaId);
+}
+
+async function eliminarAutoRecurrente(userId: string, cuentaId: string) {
+  await supabase
+    .from('gastos_recurrentes')
+    .delete()
+    .eq('user_id', userId)
+    .eq('auto_generado_cuenta_id', cuentaId);
+}
+
 interface CuentaConConfig extends Cuenta {
   monedero_config?: CuentaMonederoConfig | null;
   saldo_actual?: number;
@@ -266,14 +306,19 @@ export default function ConfigCuentas() {
           if (updateError) throw updateError;
         }
 
-        // Handle monedero config
+        // Handle monedero config and auto-generated recurring
         if (data.tipo === 'monedero' && data.recarga_mensual) {
           if (editingCuenta.monedero_config) {
             await supabase
               .from('cuentas_monedero_config')
               .update({ recarga_mensual: data.recarga_mensual })
               .eq('id', editingCuenta.monedero_config.id);
+
+            if (data.recarga_mensual !== editingCuenta.monedero_config.recarga_mensual) {
+              await actualizarAutoRecurrente(user.id, editingCuenta.id, data.recarga_mensual);
+            }
           } else {
+            // Type just changed to monedero — create config and recurring
             await supabase
               .from('cuentas_monedero_config')
               .insert({
@@ -281,12 +326,14 @@ export default function ConfigCuentas() {
                 cuenta_id: editingCuenta.id,
                 recarga_mensual: data.recarga_mensual
               });
+            await crearAutoRecurrente(user.id, editingCuenta.id, data.nombre, data.recarga_mensual);
           }
         } else if (data.tipo !== 'monedero' && editingCuenta.monedero_config) {
           await supabase
             .from('cuentas_monedero_config')
             .delete()
             .eq('id', editingCuenta.monedero_config.id);
+          await eliminarAutoRecurrente(user.id, editingCuenta.id);
         }
 
         haptic.trigger('success');
@@ -310,7 +357,7 @@ export default function ConfigCuentas() {
 
         if (createError) throw createError;
 
-        // Create monedero config if needed
+        // Create monedero config and auto-generated recurring income if needed
         if (data.tipo === 'monedero' && data.recarga_mensual) {
           await supabase
             .from('cuentas_monedero_config')
@@ -319,10 +366,17 @@ export default function ConfigCuentas() {
               cuenta_id: newCuenta.id,
               recarga_mensual: data.recarga_mensual
             });
+
+          const creado = await crearAutoRecurrente(user.id, newCuenta.id, data.nombre, data.recarga_mensual);
+          if (!creado) {
+            toast({ title: 'Cuenta creada', description: 'No se pudo crear el recurrente de recarga: crea primero una categoría de ingreso.' });
+          }
         }
 
         haptic.trigger('success');
-        toast({ title: 'Cuenta creada' });
+        if (data.tipo !== 'monedero' || !data.recarga_mensual) {
+          toast({ title: 'Cuenta creada' });
+        }
       }
 
       // Refresh list — setting rawCuentas triggers useAccountBalances to recompute balances

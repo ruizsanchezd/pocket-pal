@@ -36,7 +36,8 @@ import {
   Loader2,
   Pause,
   Play,
-  MoreHorizontal
+  MoreHorizontal,
+  Wallet
 } from 'lucide-react';
 import { GastoRecurrente, Cuenta, Categoria } from '@/types/database';
 import { GastoRecurrenteFormData } from '@/lib/validations';
@@ -59,7 +60,7 @@ export default function ConfigRecurrentes() {
 
   // Cached static data from React Query
   const { data: cuentas = [] as Cuenta[], isLoading: cuentasLoading } = useCuentas();
-  const { data: categorias = [] as Categoria[], isLoading: categoriasLoading } = useCategorias();
+  const { data: categorias = [] as Categoria[], isLoading: categoriasLoading, refetch: refetchCategorias } = useCategorias();
 
   const [gastos, setGastos] = useState<GastoRecurrenteConRelaciones[]>([]);
   const [gastosLoading, setGastosLoading] = useState(true);
@@ -317,14 +318,20 @@ export default function ConfigRecurrentes() {
                       onClick={() => handleEdit(gasto)}
                     >
                       <div className="space-y-1 min-w-0 flex-1">
-                        <div>
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-medium">{gasto.concepto}</span>
                           <span className={cn(
-                            "font-bold ml-2",
+                            "font-bold",
                             gasto.cantidad >= 0 ? "text-green-600" : "text-destructive"
                           )}>
                             {formatCurrency(Number(gasto.cantidad))}
                           </span>
+                          {gasto.auto_generado_cuenta_id && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-muted text-muted-foreground">
+                              <Wallet className="h-3 w-3" />
+                              Auto
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                           <span
@@ -411,7 +418,7 @@ export default function ConfigRecurrentes() {
                     initialData={editingGasto || undefined}
                     onSubmit={handleSave}
                     onCancel={() => setModalOpen(false)}
-                    onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                    onCategoriaCreated={() => refetchCategorias()}
                   />
                 </div>
               </DrawerContent>
@@ -436,7 +443,7 @@ export default function ConfigRecurrentes() {
                   initialData={editingGasto || undefined}
                   onSubmit={handleSave}
                   onCancel={() => setModalOpen(false)}
-                  onCategoriaCreated={(cat) => setCategorias([...categorias, cat])}
+                  onCategoriaCreated={() => refetchCategorias()}
                 />
               </DialogContent>
             </Dialog>

@@ -141,6 +141,7 @@ export type Database = {
       gastos_recurrentes: {
         Row: {
           activo: boolean | null
+          auto_generado_cuenta_id: string | null
           cantidad: number
           categoria_id: string
           concepto: string
@@ -154,6 +155,7 @@ export type Database = {
         }
         Insert: {
           activo?: boolean | null
+          auto_generado_cuenta_id?: string | null
           cantidad: number
           categoria_id: string
           concepto: string
@@ -167,6 +169,7 @@ export type Database = {
         }
         Update: {
           activo?: boolean | null
+          auto_generado_cuenta_id?: string | null
           cantidad?: number
           categoria_id?: string
           concepto?: string

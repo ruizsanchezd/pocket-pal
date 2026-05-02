@@ -70,6 +70,7 @@ export interface GastoRecurrente {
   activo: boolean;
   is_transfer: boolean;
   destination_account_id: string | null;
+  auto_generado_cuenta_id: string | null;
   created_at: string;
 }
 
