@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, subMonths, startOfMonth, differenceInMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,12 +21,16 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import { DistribucionSection } from '@/components/dashboard/DistribucionSection';
+import { PatrimonioDetalle, CuentaDetalle } from '@/components/dashboard/PatrimonioDetalle';
 import { useAutoSnapshot } from '@/hooks/useAutoSnapshot';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface PatrimonioData {
   mes: string;
+  mesKey: string;
   patrimonio: number;
+  detalle: CuentaDetalle[];
 }
 
 export default function Dashboard() {
@@ -48,6 +52,10 @@ export default function Dashboard() {
     ingresos: 0,
     gastos: 0
   });
+  const [selectedMesDetalle, setSelectedMesDetalle] = useState<PatrimonioData | null>(null);
+  const [detallePosition, setDetallePosition] = useState<{ x: number; y: number } | null>(null);
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -176,13 +184,35 @@ export default function Dashboard() {
           .gte('mes', sixMonthsAgo)
           .order('mes');
 
-        // Group by month and sum balances
+        // Group by month: sum balances + build per-account detalle
         const patrimonioByMonth = new Map<string, number>();
+        const detalleByMonth = new Map<string, CuentaDetalle[]>();
+        const cuentaMap = new Map(rawCuentas.map(c => [c.id, c]));
 
         snapshots?.forEach(snap => {
-          const balance = snap.saldo_registrado ?? snap.saldo_calculado ?? 0;
+          const cuenta = cuentaMap.get(snap.cuenta_id);
+          // Inversion: trust saldo_registrado (manual market value).
+          // Corriente/monedero: trust saldo_calculado (always reflects movements + recargas).
+          const isInversion = cuenta?.tipo === 'inversion';
+          const balance = isInversion
+            ? (snap.saldo_registrado ?? snap.saldo_calculado ?? 0)
+            : (snap.saldo_calculado ?? snap.saldo_registrado ?? 0);
+
           const current = patrimonioByMonth.get(snap.mes) || 0;
           patrimonioByMonth.set(snap.mes, current + Number(balance));
+
+          if (cuenta) {
+            if (!detalleByMonth.has(snap.mes)) detalleByMonth.set(snap.mes, []);
+            detalleByMonth.get(snap.mes)!.push({
+              cuentaId: snap.cuenta_id,
+              nombre: cuenta.nombre,
+              tipo: cuenta.tipo as CuentaDetalle['tipo'],
+              color: cuenta.color ?? null,
+              saldo: Number(balance),
+              tipoSnapshot: (snap.tipo ?? 'auto') as 'manual' | 'auto',
+              orden: cuenta.orden ?? 999,
+            });
+          }
         });
 
         // Add current month with live calculated balance
@@ -191,6 +221,15 @@ export default function Dashboard() {
           0
         );
         patrimonioByMonth.set(currentMonth, currentMonthPatrimonio);
+        detalleByMonth.set(currentMonth, cuentasConSaldo.map(c => ({
+          cuentaId: c.id,
+          nombre: c.nombre,
+          tipo: c.tipo as CuentaDetalle['tipo'],
+          color: c.color ?? null,
+          saldo: c.saldo_actual,
+          tipoSnapshot: 'live' as const,
+          orden: c.orden ?? 999,
+        })));
 
         // Calculate previous month patrimonio before building the chart array
         const prevMonthStr = format(startOfMonth(subMonths(now, 1)), 'yyyy-MM');
@@ -207,7 +246,9 @@ export default function Dashboard() {
 
           patrimonioHistory.push({
             mes: monthLabel,
-            patrimonio
+            mesKey: monthStr,
+            patrimonio,
+            detalle: detalleByMonth.get(monthStr) ?? [],
           });
         }
 
@@ -241,6 +282,28 @@ export default function Dashboard() {
   }, [user, rawCuentas, cuentasLoading]);
 
   const currency = profile?.divisa_principal || 'EUR';
+
+  const handleChartClick = (data: any) => {
+    if (!data?.activePayload?.[0]) return;
+    const payload = data.activePayload[0].payload as PatrimonioData;
+    if (!payload.mesKey) return;
+
+    if (selectedMesDetalle?.mesKey === payload.mesKey) {
+      setSelectedMesDetalle(null);
+      setDetallePosition(null);
+      return;
+    }
+
+    if (!isMobile && data.activeCoordinate && chartWrapperRef.current) {
+      const rect = chartWrapperRef.current.getBoundingClientRect();
+      setDetallePosition({
+        x: rect.left + data.activeCoordinate.x,
+        y: rect.top + data.activeCoordinate.y,
+      });
+    }
+
+    setSelectedMesDetalle(payload);
+  };
 
   // Group accounts by type
   const accountsByType = useMemo(() => {
@@ -502,13 +565,13 @@ export default function Dashboard() {
                 </CardTitle>
                 <CardDescription>Últimos 6 meses</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-[300px]">
+              <CardContent className="pb-2">
+                <div ref={chartWrapperRef} className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={patrimonioData}>
+                    <LineChart data={patrimonioData} onClick={handleChartClick} style={{ cursor: 'pointer' }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="mes" 
+                      <XAxis
+                        dataKey="mes"
                         className="text-xs"
                         tick={{ fill: 'hsl(var(--muted-foreground))' }}
                       />
@@ -518,7 +581,7 @@ export default function Dashboard() {
                         tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                         width={28}
                       />
-                      <Tooltip 
+                      <Tooltip
                         formatter={(value: number) => [formatCurrency(value, currency), 'Patrimonio']}
                         contentStyle={{
                           backgroundColor: 'hsl(var(--background))',
@@ -531,11 +594,28 @@ export default function Dashboard() {
                         dataKey="patrimonio"
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
-                        dot={{ fill: 'hsl(var(--primary))' }}
+                        dot={(props: any) => {
+                          const isSelected = selectedMesDetalle?.mesKey === patrimonioData[props.index]?.mesKey;
+                          return (
+                            <circle
+                              key={props.key}
+                              cx={props.cx}
+                              cy={props.cy}
+                              r={isSelected ? 6 : 4}
+                              fill="hsl(var(--primary))"
+                              stroke={isSelected ? 'hsl(var(--background))' : 'none'}
+                              strokeWidth={2}
+                            />
+                          );
+                        }}
+                        activeDot={{ r: 5, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+                <p className="text-xs text-muted-foreground text-center mt-2">
+                  Haz clic en un punto para ver el desglose
+                </p>
               </CardContent>
             </Card>
             </ErrorBoundary>
@@ -547,6 +627,21 @@ export default function Dashboard() {
           </ErrorBoundary>
         </div>
       </MainLayout>
+
+      {selectedMesDetalle && (
+        <PatrimonioDetalle
+          mesKey={selectedMesDetalle.mesKey}
+          patrimonio={selectedMesDetalle.patrimonio}
+          detalle={selectedMesDetalle.detalle}
+          currency={currency}
+          position={isMobile ? null : detallePosition}
+          isMobile={isMobile}
+          onClose={() => {
+            setSelectedMesDetalle(null);
+            setDetallePosition(null);
+          }}
+        />
+      )}
     </ProtectedRoute>
   );
 }

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { format, subMonths, startOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, differenceInMonths } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
 /**
- * Hook to automatically generate monthly snapshots for the previous month
- * Runs once when the app loads and detects a new month
+ * Generates / refreshes monthly snapshots for the previous month.
+ * Runs once per session. Idempotent: rerunning refreshes saldo_calculado
+ * but never touches saldo_registrado (manual overrides are preserved).
  */
 export function useAutoSnapshot(userId: string | undefined) {
   const hasRun = useRef(false);
@@ -17,26 +18,10 @@ export function useAutoSnapshot(userId: string | undefined) {
       try {
         const now = new Date();
         const previousMonth = format(subMonths(now, 1), 'yyyy-MM');
+        const previousMonthDate = startOfMonth(subMonths(now, 1));
         const currentMonthStart = format(startOfMonth(now), 'yyyy-MM-dd');
 
-        // Check if auto-snapshots already exist for previous month
-        const { data: existing } = await supabase
-          .from('snapshots_patrimonio')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('mes', previousMonth)
-          .eq('tipo', 'auto')
-          .limit(1);
-
-        if (existing && existing.length > 0) {
-          if (import.meta.env.DEV) {
-            console.log('Auto-snapshots already exist for', previousMonth);
-          }
-          return; // Already generated
-        }
-
-        // Only generate historical snapshots if the user has movements before the current month.
-        // If there are none, the user just started and there's no meaningful history to snapshot.
+        // Skip if user has no movements before current month — nothing to snapshot
         const { data: anyMovements } = await supabase
           .from('movimientos')
           .select('id')
@@ -46,7 +31,6 @@ export function useAutoSnapshot(userId: string | undefined) {
 
         if (!anyMovements || anyMovements.length === 0) return;
 
-        // Fetch all active accounts
         const { data: cuentas } = await supabase
           .from('cuentas')
           .select('*')
@@ -55,18 +39,37 @@ export function useAutoSnapshot(userId: string | undefined) {
 
         if (!cuentas || cuentas.length === 0) return;
 
-        // For each account, calculate balance at end of previous month
+        // For monederos we need the monthly recarga to include it in saldo_calculado
+        const monederoIds = cuentas.filter(c => c.tipo === 'monedero').map(c => c.id);
+        const { data: monederoConfigs } = monederoIds.length > 0
+          ? await supabase
+              .from('cuentas_monedero_config')
+              .select('cuenta_id, recarga_mensual')
+              .in('cuenta_id', monederoIds)
+          : { data: [] as { cuenta_id: string; recarga_mensual: number }[] };
+
+        const monederoConfigMap = new Map(
+          (monederoConfigs ?? []).map(c => [c.cuenta_id, Number(c.recarga_mensual)])
+        );
+
         for (const cuenta of cuentas) {
-          // Check if a snapshot already exists for this account/month (manual or auto)
+          // Skip accounts not yet created at the previous-month cutoff
+          const cuentaCreatedMonth = format(startOfMonth(new Date(cuenta.created_at)), 'yyyy-MM');
+          if (cuentaCreatedMonth > previousMonth) continue;
+
           const { data: existingSnap } = await supabase
             .from('snapshots_patrimonio')
-            .select('id, tipo')
+            .select('id, updated_at')
             .eq('user_id', userId)
             .eq('mes', previousMonth)
             .eq('cuenta_id', cuenta.id)
-            .single();
+            .maybeSingle();
 
-          // Get all movements before current month
+          // Skip re-computation if this snapshot was already refreshed in the current month
+          if (existingSnap?.updated_at && new Date(existingSnap.updated_at) >= startOfMonth(now)) {
+            continue;
+          }
+
           const { data: movimientos } = await supabase
             .from('movimientos')
             .select('cantidad')
@@ -78,10 +81,25 @@ export function useAutoSnapshot(userId: string | undefined) {
             0
           ) || 0;
 
-          const saldoCalculado = Number(cuenta.saldo_inicial) + sumaMovimientos;
+          // Monederos: include recargas accrued by the end of the previous month.
+          // differenceInMonths(prevMonthStart, createdMonthStart) counts the recargas
+          // that landed on day 1 from creation through the start of the previous month
+          // (e.g. created Feb 13, prev=Apr 1 → 2 recargas: Mar 1 and Apr 1).
+          let recargaAcumulada = 0;
+          if (cuenta.tipo === 'monedero' && cuenta.created_at) {
+            const recargaMensual = monederoConfigMap.get(cuenta.id) ?? 0;
+            const meses = differenceInMonths(
+              previousMonthDate,
+              startOfMonth(new Date(cuenta.created_at))
+            );
+            recargaAcumulada = recargaMensual * Math.max(0, meses);
+          }
+
+          const saldoCalculado =
+            Number(cuenta.saldo_inicial) + sumaMovimientos + recargaAcumulada;
 
           if (existingSnap) {
-            // If there's already a snapshot, only update saldo_calculado (don't touch saldo_registrado)
+            // Refresh saldo_calculado; preserve saldo_registrado (manual override)
             await supabase
               .from('snapshots_patrimonio')
               .update({
@@ -90,7 +108,6 @@ export function useAutoSnapshot(userId: string | undefined) {
               })
               .eq('id', existingSnap.id);
           } else {
-            // Create new auto-snapshot
             await supabase
               .from('snapshots_patrimonio')
               .insert({
@@ -105,7 +122,7 @@ export function useAutoSnapshot(userId: string | undefined) {
         }
 
         if (import.meta.env.DEV) {
-          console.log('Auto-snapshots generated for', previousMonth);
+          console.log('Auto-snapshots refreshed for', previousMonth);
         }
       } catch (error) {
         if (import.meta.env.DEV) {
