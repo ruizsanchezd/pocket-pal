@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -115,7 +115,15 @@ export function PatrimonioDetalle({
   onClose,
 }: PatrimonioDetalleProps) {
   const panelRef = useRef<HTMLDivElement>(null);
-  const swipeDismiss = useSwipeDownToDismiss(onClose);
+  const [open, setOpen] = useState(true);
+  const swipeDismiss = useSwipeDownToDismiss(() => setOpen(false));
+
+  // After the Vaul close animation completes, unmount via parent.
+  useEffect(() => {
+    if (open) return;
+    const t = window.setTimeout(onClose, 500);
+    return () => window.clearTimeout(t);
+  }, [open, onClose]);
 
   // Close on click outside (desktop)
   useEffect(() => {
@@ -142,7 +150,7 @@ export function PatrimonioDetalle({
 
   if (isMobile) {
     return (
-      <Drawer open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent>
           <DrawerHeader className="pb-0">
             <DrawerTitle>Desglose de patrimonio</DrawerTitle>
