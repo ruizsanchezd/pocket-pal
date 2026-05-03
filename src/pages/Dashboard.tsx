@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { format, subMonths, startOfMonth, differenceInMonths } from 'date-fns';
+import { format, subMonths, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -91,12 +91,6 @@ export default function Dashboard() {
 
       const cuentasData = rawCuentas;
 
-      // Fetch monedero configs for recarga mensual calculation
-      const { data: monederoConfigs } = await supabase
-        .from('cuentas_monedero_config')
-        .select('cuenta_id, recarga_mensual')
-        .eq('user_id', user.id);
-
       if (cuentasData.length > 0) {
         const now = new Date();
 
@@ -145,24 +139,9 @@ export default function Dashboard() {
               rendimiento = saldoActual - invertido;
             }
 
-            // For monedero type, add accumulated monthly recargas
-            let recargaAcumulada = 0;
-            if (cuenta.tipo === 'monedero') {
-              const config = monederoConfigs?.find(c => c.cuenta_id === cuenta.id);
-              if (config && cuenta.created_at) {
-                // Count months from start of creation month to start of current month
-                // dia_recarga is always 1, so each month's recarga has already happened if we're past day 1
-                const meses = differenceInMonths(
-                  startOfMonth(now),
-                  startOfMonth(new Date(cuenta.created_at))
-                );
-                recargaAcumulada = config.recarga_mensual * meses;
-              }
-            }
-
             return {
               ...cuenta,
-              saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos + recargaAcumulada,
+              saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos,
               gastos_mes: gastosMes,
               invertido,
               rendimiento

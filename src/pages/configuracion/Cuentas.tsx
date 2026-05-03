@@ -55,7 +55,7 @@ import { formatCurrency } from '@/lib/format';
 import { useAccountBalances } from '@/hooks/useAccountBalances';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
-import { format, subMonths, differenceInMonths, startOfMonth } from 'date-fns';
+import { format, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 async function crearAutoRecurrente(userId: string, cuentaId: string, cuentaNombre: string, recargaMensual: number) {
@@ -134,18 +134,9 @@ export default function ConfigCuentas() {
       rawCuentas.map((cuenta) => {
         const monedero_config = monederoConfigs.find((c) => c.cuenta_id === cuenta.id) ?? null;
 
-        let recargaAcumulada = 0;
-        if (cuenta.tipo === 'monedero' && monedero_config && cuenta.created_at) {
-          const meses = differenceInMonths(
-            startOfMonth(new Date()),
-            startOfMonth(new Date(cuenta.created_at))
-          );
-          recargaAcumulada = monedero_config.recarga_mensual * meses;
-        }
-
         return {
           ...cuenta,
-          saldo_actual: (balances[cuenta.id] ?? 0) + recargaAcumulada,
+          saldo_actual: balances[cuenta.id] ?? 0,
           monedero_config,
         };
       }),
@@ -209,19 +200,7 @@ export default function ConfigCuentas() {
             0
           ) || 0;
 
-          // For monedero accounts, recargaAcumulada is added on top by the Dashboard,
-          // so we need to subtract it here so the formula resolves to the user's intended balance.
-          let recargaAcumulada = 0;
-          if (editingCuenta.tipo === 'monedero' && editingCuenta.monedero_config && editingCuenta.created_at) {
-            const meses = differenceInMonths(
-              startOfMonth(new Date()),
-              startOfMonth(new Date(editingCuenta.created_at))
-            );
-            recargaAcumulada = editingCuenta.monedero_config.recarga_mensual * meses;
-          }
-
-          // New saldo_inicial = desired balance - sum of movements - recargaAcumulada
-          const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos - recargaAcumulada;
+          const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos;
 
           // Update account with new saldo_inicial
           const { error: updateError } = await supabase
