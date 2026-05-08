@@ -60,6 +60,13 @@ export function MovimientoForm({
     return -1;
   });
 
+  const [cantidadStrMobile, setCantidadStrMobile] = useState(() =>
+    initialData?.cantidad !== undefined ? String(Math.abs(Number(initialData.cantidad))) : ''
+  );
+  const [cantidadStrDesktop, setCantidadStrDesktop] = useState(() =>
+    initialData?.cantidad !== undefined ? String(Number(initialData.cantidad)) : ''
+  );
+
   const form = useForm<MovimientoFormData>({
     resolver: zodResolver(movimientoSchema),
     defaultValues: {
@@ -197,32 +204,49 @@ export function MovimientoForm({
                       {sign === 1 ? '+' : '−'}
                     </Button>
                     <Input
-                      type="number"
+                      type="text"
                       inputMode="decimal"
-                      step="0.01"
                       placeholder="0.00"
-                      value={field.value !== undefined ? Math.abs(Number(field.value)) || '' : ''}
+                      value={cantidadStrMobile}
                       onChange={(e) => {
-                        const absValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                        field.onChange(absValue !== undefined ? Math.abs(absValue) * sign : undefined);
+                        const raw = e.target.value;
+                        setCantidadStrMobile(raw);
+                        const normalized = raw.replace(',', '.');
+                        if (normalized === '' || normalized === '.') {
+                          field.onChange(undefined);
+                          return;
+                        }
+                        const n = parseFloat(normalized);
+                        if (Number.isFinite(n)) {
+                          field.onChange(Math.abs(n) * sign);
+                        }
                       }}
                     />
                   </div>
                 ) : (
                   <Input
-                    type="number"
-                    step="0.01"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="Ej: -20.50 o 1500"
-                    value={field.value !== undefined ? field.value : ''}
+                    value={cantidadStrDesktop}
                     onChange={(e) => {
-                      const newValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                      const newSign: 1 | -1 = newValue !== undefined && newValue < 0 ? -1 : 1;
-                      if (newSign !== prevSignRef.current) {
-                        form.setValue('categoria_id', '');
-                        form.setValue('subcategoria_id', undefined);
-                        prevSignRef.current = newSign;
+                      const raw = e.target.value;
+                      setCantidadStrDesktop(raw);
+                      const normalized = raw.replace(',', '.');
+                      if (normalized === '' || normalized === '-' || normalized === '.' || normalized === '-.') {
+                        field.onChange(undefined);
+                        return;
                       }
-                      field.onChange(newValue);
+                      const n = parseFloat(normalized);
+                      if (Number.isFinite(n)) {
+                        const newSign: 1 | -1 = n < 0 ? -1 : 1;
+                        if (newSign !== prevSignRef.current) {
+                          form.setValue('categoria_id', '');
+                          form.setValue('subcategoria_id', undefined);
+                          prevSignRef.current = newSign;
+                        }
+                        field.onChange(n);
+                      }
                     }}
                     className={cn(
                       field.value !== undefined && Number(field.value) > 0 && "text-green-600",
