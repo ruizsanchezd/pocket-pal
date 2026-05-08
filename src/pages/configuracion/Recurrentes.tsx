@@ -145,7 +145,7 @@ export default function ConfigRecurrentes() {
           .update({
             concepto: data.concepto,
             cantidad: data.cantidad,
-            dia_del_mes: 1,
+            dia_del_mes: data.dia_del_mes ?? 1,
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
@@ -158,14 +158,15 @@ export default function ConfigRecurrentes() {
         if (error) throw error;
 
         // Update local state
-        setGastos(gastos.map(g => 
-          g.id === editingGasto.id 
+        setGastos(gastos.map(g =>
+          g.id === editingGasto.id
             ? {
                 ...g,
                 ...data,
+                dia_del_mes: data.dia_del_mes ?? 1,
                 cuenta: cuentas.find(c => c.id === data.cuenta_id),
                 categoria: categorias.find(c => c.id === data.categoria_id),
-                subcategoria: data.subcategoria_id 
+                subcategoria: data.subcategoria_id
                   ? categorias.find(c => c.id === data.subcategoria_id)
                   : null
               }
@@ -181,7 +182,7 @@ export default function ConfigRecurrentes() {
             user_id: user.id,
             concepto: data.concepto,
             cantidad: data.cantidad,
-            dia_del_mes: 1,
+            dia_del_mes: data.dia_del_mes ?? 1,
             cuenta_id: data.cuenta_id,
             categoria_id: data.categoria_id,
             subcategoria_id: data.subcategoria_id || null,
@@ -334,6 +335,8 @@ export default function ConfigRecurrentes() {
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                          <span className="text-xs">Día {gasto.dia_del_mes ?? 1}</span>
+                          <span>•</span>
                           <span
                             className="px-2 py-0.5 rounded text-xs"
                             style={{ backgroundColor: `${gasto.cuenta?.color}20` }}

@@ -36,7 +36,6 @@ import {
 } from '@/components/ui/dialog';
 import { MovimientoForm } from '@/components/movimientos/MovimientoForm';
 import { SwipeableRow } from '@/components/movimientos/SwipeableRow';
-import { RecurrenteBanner } from '@/components/movimientos/RecurrenteBanner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
 import { useMovimientos } from '@/hooks/useMovimientos';
@@ -63,7 +62,6 @@ export default function Movimientos() {
     cuentas,
     categorias,
     loading,
-    showRecurrenteBanner,
     formattedMonth,
     categoriasParent,
     todasSubcategorias,
@@ -80,7 +78,6 @@ export default function Movimientos() {
     editingMovimiento,
     deleteConfirm,
     setDeleteConfirm,
-    setShowRecurrenteBanner,
     navigateMonth,
     handleCreateMovimiento,
     handleEditMovimiento,
@@ -88,7 +85,6 @@ export default function Movimientos() {
     handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
-    handleGenerateRecurrentes,
     addCategoria,
     haptic,
     profile,
@@ -183,13 +179,6 @@ export default function Movimientos() {
               </Button>
             </div>
           </div>
-
-          {/* Recurrent expenses banner */}
-          <RecurrenteBanner
-            show={showRecurrenteBanner}
-            onDismiss={() => setShowRecurrenteBanner(false)}
-            onGenerate={handleGenerateRecurrentes}
-          />
 
           {/* Movements table */}
           <ErrorBoundary>

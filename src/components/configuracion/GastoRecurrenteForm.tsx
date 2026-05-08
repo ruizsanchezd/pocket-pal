@@ -56,6 +56,7 @@ export function GastoRecurrenteForm({
     defaultValues: {
       concepto: initialData?.concepto || '',
       cantidad: initialData?.cantidad ? Number(initialData.cantidad) : undefined,
+      dia_del_mes: initialData?.dia_del_mes ?? 1,
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || '',
       categoria_id: initialData?.categoria_id || '',
       subcategoria_id: initialData?.subcategoria_id || undefined,
@@ -138,6 +139,31 @@ export function GastoRecurrenteForm({
                     field.onChange(value ? parseFloat(value) : undefined);
                   }}
                   value={field.value ?? ''}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="dia_del_mes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Día del mes</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  placeholder="1"
+                  {...field}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(value ? parseInt(value, 10) : 1);
+                  }}
+                  value={field.value ?? 1}
                 />
               </FormControl>
               <FormMessage />
