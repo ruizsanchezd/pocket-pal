@@ -25,16 +25,17 @@ interface GastoRecurrenteInput {
   id: string;
   concepto: string;
   cantidad: number;
+  dia_del_mes: number;
   selected: boolean;
   cuentaId?: string;
 }
 
 const DEFAULT_GASTOS_RECURRENTES: GastoRecurrenteInput[] = [
-  { id: '1', concepto: 'Salario', cantidad: 2000, selected: false },
-  { id: '2', concepto: 'Alquiler', cantidad: -900, selected: false },
-  { id: '3', concepto: 'Gimnasio', cantidad: -50, selected: false },
-  { id: '4', concepto: 'Netflix', cantidad: -12, selected: false },
-  { id: '5', concepto: 'Spotify', cantidad: -10, selected: false },
+  { id: '1', concepto: 'Salario', cantidad: 2000, dia_del_mes: 1, selected: false },
+  { id: '2', concepto: 'Alquiler', cantidad: -900, dia_del_mes: 1, selected: false },
+  { id: '3', concepto: 'Gimnasio', cantidad: -50, dia_del_mes: 1, selected: false },
+  { id: '4', concepto: 'Netflix', cantidad: -12, dia_del_mes: 1, selected: false },
+  { id: '5', concepto: 'Spotify', cantidad: -10, dia_del_mes: 1, selected: false },
 ];
 
 export default function Onboarding() {
@@ -115,6 +116,15 @@ export default function Onboarding() {
     ));
   };
 
+  const updateGastoDia = (id: string, value: string) => {
+    const parsed = parseInt(value, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= 31) {
+      setGastosRecurrentes(gastosRecurrentes.map(g =>
+        g.id === id ? { ...g, dia_del_mes: parsed } : g
+      ));
+    }
+  };
+
   const addCustomGasto = () => {
     if (customGasto.concepto && customGasto.cantidad) {
       setGastosRecurrentes([
@@ -123,6 +133,7 @@ export default function Onboarding() {
           id: crypto.randomUUID(),
           concepto: customGasto.concepto,
           cantidad: parseFloat(customGasto.cantidad),
+          dia_del_mes: 1,
           selected: true,
           cuentaId: defaultCuentaId
         }
@@ -245,7 +256,7 @@ export default function Onboarding() {
               user_id: user.id,
               concepto: g.concepto,
               cantidad: g.cantidad,
-              dia_del_mes: 1,
+              dia_del_mes: g.dia_del_mes ?? 1,
               cuenta_id: createdCuenta?.id ?? createdDefaultCuenta.id,
               categoria_id: g.cantidad > 0
                 ? (otrosIngresosCategory?.id ?? otrosGastosCategory?.id)
@@ -515,6 +526,15 @@ export default function Onboarding() {
                               value={gasto.cantidad}
                               onChange={(e) => updateGastoCantidad(gasto.id, e.target.value)}
                               className={`w-24 h-7 text-right px-2 font-medium ${gasto.cantidad >= 0 ? 'text-green-600' : 'text-destructive'}`}
+                            />
+                            <Input
+                              type="number"
+                              min={1}
+                              max={31}
+                              value={gasto.dia_del_mes}
+                              onChange={(e) => updateGastoDia(gasto.id, e.target.value)}
+                              className="w-14 h-7 text-right px-2 text-xs"
+                              title="Día del mes"
                             />
                           </div>
                         ) : (

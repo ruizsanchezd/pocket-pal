@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { format, parse, addMonths, subMonths } from 'date-fns';
+import { format, parse, addMonths, subMonths, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useWebHaptics } from 'web-haptics/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -60,7 +60,6 @@ export function useMovimientos() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMovimiento, setEditingMovimiento] = useState<MovimientoConRelaciones | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [showRecurrenteBanner, setShowRecurrenteBanner] = useState(false);
 
   // Filters
   const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
@@ -131,19 +130,88 @@ export function useMovimientos() {
 
       setRawMovimientos((movimientosData ?? []) as Movimiento[]);
 
-      // Check if we should show recurrente banner
-      const hasRecurrentes = movimientosData?.some(m => m.es_recurrente) || false;
-      if (!hasRecurrentes && currentMonth === format(new Date(), 'yyyy-MM')) {
+      // Auto-generate recurrentes for current month if any are due today or earlier
+      if (currentMonth === format(new Date(), 'yyyy-MM')) {
+        const today = new Date();
+        const currentDay = today.getDate();
+        const date = parse(currentMonth, 'yyyy-MM', new Date());
+        const daysInMonth = getDaysInMonth(date);
+
         const { data: templates } = await supabase
           .from('gastos_recurrentes')
-          .select('id')
+          .select('*')
           .eq('user_id', user.id)
-          .eq('activo', true)
-          .limit(1);
+          .eq('activo', true);
 
-        setShowRecurrenteBanner(!!templates && templates.length > 0);
-      } else {
-        setShowRecurrenteBanner(false);
+        if (templates?.length) {
+          const existingTemplateIds = new Set(
+            movimientosData
+              ?.filter(m => m.es_recurrente && m.recurrente_template_id)
+              .map(m => m.recurrente_template_id) ?? []
+          );
+
+          const pending = templates.filter(t => {
+            if (existingTemplateIds.has(t.id)) return false;
+            const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
+            return actualDay <= currentDay;
+          });
+
+          if (pending.length > 0) {
+            const movimientosToCreate: MovimientoInsert[] = [];
+
+            pending.forEach(t => {
+              const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
+              const fechaStr = format(
+                new Date(date.getFullYear(), date.getMonth(), actualDay),
+                'yyyy-MM-dd'
+              );
+
+              movimientosToCreate.push({
+                user_id: user.id,
+                fecha: fechaStr,
+                concepto: t.concepto,
+                cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
+                cuenta_id: t.cuenta_id,
+                categoria_id: t.categoria_id,
+                subcategoria_id: t.subcategoria_id,
+                notas: t.notas,
+                es_recurrente: true,
+                recurrente_template_id: t.id,
+                mes_referencia: currentMonth
+              });
+
+              if (t.is_transfer && t.destination_account_id) {
+                movimientosToCreate.push({
+                  user_id: user.id,
+                  fecha: fechaStr,
+                  concepto: t.concepto,
+                  cantidad: Math.abs(t.cantidad),
+                  cuenta_id: t.destination_account_id,
+                  categoria_id: t.categoria_id,
+                  subcategoria_id: t.subcategoria_id,
+                  notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
+                  es_recurrente: true,
+                  recurrente_template_id: t.id,
+                  mes_referencia: currentMonth
+                });
+              }
+            });
+
+            const { error } = await supabase.from('movimientos').insert(movimientosToCreate);
+
+            if (!error) {
+              const { data: updated } = await supabase
+                .from('movimientos')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('mes_referencia', currentMonth)
+                .order('fecha', { ascending: false })
+                .order('created_at', { ascending: false });
+
+              setRawMovimientos((updated ?? []) as Movimiento[]);
+            }
+          }
+        }
       }
 
       setMovimientosLoading(false);
@@ -199,26 +267,8 @@ export function useMovimientos() {
       });
     } else {
       haptic.trigger('success');
-
-      const deletedWasRecurrente = rawMovimientos.find(m => m.id === id)?.es_recurrente;
-      const updatedRaw = rawMovimientos.filter(m => m.id !== id);
-      setRawMovimientos(updatedRaw);
+      setRawMovimientos(rawMovimientos.filter(m => m.id !== id));
       toast({ title: 'Movimiento eliminado' });
-
-      // Re-evaluate banner
-      const isCurrentMonth = currentMonth === format(new Date(), 'yyyy-MM');
-      if (isCurrentMonth && deletedWasRecurrente) {
-        const stillHasRecurrentes = updatedRaw.some(m => m.es_recurrente);
-        if (!stillHasRecurrentes) {
-          const { data: templates } = await supabase
-            .from('gastos_recurrentes')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('activo', true)
-            .limit(1);
-          setShowRecurrenteBanner(!!templates && templates.length > 0);
-        }
-      }
     }
     setDeleteConfirm(null);
   };
@@ -360,83 +410,6 @@ export function useMovimientos() {
     setEditingMovimiento(null);
   };
 
-  const handleGenerateRecurrentes = async () => {
-    if (!user) return;
-
-    const { data: templates } = await supabase
-      .from('gastos_recurrentes')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('activo', true);
-
-    if (!templates || templates.length === 0) {
-      setShowRecurrenteBanner(false);
-      return;
-    }
-
-    const date = parse(currentMonth, 'yyyy-MM', new Date());
-    const movimientosToCreate: MovimientoInsert[] = [];
-
-    templates.forEach(t => {
-      const fechaStr = format(
-        new Date(date.getFullYear(), date.getMonth(), 1),
-        'yyyy-MM-dd'
-      );
-
-      movimientosToCreate.push({
-        user_id: user.id,
-        fecha: fechaStr,
-        concepto: t.concepto,
-        cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
-        cuenta_id: t.cuenta_id,
-        categoria_id: t.categoria_id,
-        subcategoria_id: t.subcategoria_id,
-        notas: t.notas,
-        es_recurrente: true,
-        recurrente_template_id: t.id,
-        mes_referencia: currentMonth
-      });
-
-      if (t.is_transfer && t.destination_account_id) {
-        movimientosToCreate.push({
-          user_id: user.id,
-          fecha: fechaStr,
-          concepto: t.concepto,
-          cantidad: Math.abs(t.cantidad),
-          cuenta_id: t.destination_account_id,
-          categoria_id: t.categoria_id,
-          subcategoria_id: t.subcategoria_id,
-          notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
-          es_recurrente: true,
-          recurrente_template_id: t.id,
-          mes_referencia: currentMonth
-        });
-      }
-    });
-
-    const { error } = await supabase
-      .from('movimientos')
-      .insert(movimientosToCreate)
-      .select();
-
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudieron generar los gastos recurrentes'
-      });
-      return;
-    }
-
-    await refetchMovimientos();
-
-    setShowRecurrenteBanner(false);
-    toast({
-      title: 'Gastos recurrentes generados',
-      description: `Se crearon ${movimientosToCreate.length} movimientos`
-    });
-  };
-
   const addCategoria = (cat: Categoria) => {
     queryClient.setQueryData<Categoria[]>(
       ['categorias', user?.id],
@@ -450,7 +423,6 @@ export function useMovimientos() {
     categorias,
     loading,
     currentMonth,
-    showRecurrenteBanner,
     formattedMonth,
     categoriasParent,
     todasSubcategorias,
@@ -469,7 +441,6 @@ export function useMovimientos() {
     editingMovimiento,
     deleteConfirm,
     setDeleteConfirm,
-    setShowRecurrenteBanner,
     navigateMonth,
     handleCreateMovimiento,
     handleEditMovimiento,
@@ -477,7 +448,6 @@ export function useMovimientos() {
     handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
-    handleGenerateRecurrentes,
     addCategoria,
     haptic,
     profile,
