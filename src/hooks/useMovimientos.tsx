@@ -153,16 +153,18 @@ export function useMovimientos() {
             // Re-query DB for existing recurrentes to get the freshest state,
             // avoiding the race condition where two concurrent runs both see
             // an empty set and both insert the same templates.
+            // Note: do NOT filter by es_recurrente — some movimientos (e.g. monedero
+            // recargas) may have es_recurrente=false but still have a template_id set,
+            // and we need to detect them to avoid duplicates.
             const { data: existingRows } = await supabase
               .from('movimientos')
               .select('recurrente_template_id')
               .eq('user_id', user.id)
               .eq('mes_referencia', currentMonth)
-              .eq('es_recurrente', true)
               .not('recurrente_template_id', 'is', null);
 
             const existingTemplateIds = new Set(
-              existingRows?.map(m => m.recurrente_template_id).filter(Boolean) ?? []
+              existingRows?.map(m => m.recurrente_template_id).filter(id => !!id) ?? []
             );
 
             const pending = templates.filter(t => {
