@@ -550,7 +550,7 @@ export default function Movimientos() {
                   <div className="hidden md:block">
                     <Table>
                       <TableHeader>
-                        <TableRow>
+                        <TableRow className="hover:bg-transparent">
                           <TableHead className="w-[100px]">Fecha</TableHead>
                           <TableHead className="text-right pr-8">Cantidad</TableHead>
                           <TableHead>Concepto</TableHead>
