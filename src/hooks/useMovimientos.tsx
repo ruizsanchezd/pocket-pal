@@ -150,25 +150,31 @@ export function useMovimientos() {
             .eq('activo', true);
 
           if (templates?.length) {
-            // Re-query DB for existing recurrentes to get the freshest state,
-            // avoiding the race condition where two concurrent runs both see
-            // an empty set and both insert the same templates.
-            // Note: do NOT filter by es_recurrente — some movimientos (e.g. monedero
-            // recargas) may have es_recurrente=false but still have a template_id set,
-            // and we need to detect them to avoid duplicates.
+            // Re-query DB for existing recurrentes to get the freshest state.
+            // We fetch both non-null template IDs and orphaned es_recurrente rows
+            // (template_id=NULL, caused by ON DELETE SET NULL when a template is
+            // deleted and recreated). The orphan check uses concepto+cuenta_id so
+            // we don't generate a duplicate even when the template ID changed.
             const { data: existingRows } = await supabase
               .from('movimientos')
-              .select('recurrente_template_id')
+              .select('recurrente_template_id, concepto, cuenta_id')
               .eq('user_id', user.id)
               .eq('mes_referencia', currentMonth)
-              .not('recurrente_template_id', 'is', null);
+              .or('recurrente_template_id.not.is.null,es_recurrente.eq.true');
 
             const existingTemplateIds = new Set(
               existingRows?.map(m => m.recurrente_template_id).filter(id => !!id) ?? []
             );
+            // Fallback set: concepto+cuenta_id combos for orphaned rows (template_id=null)
+            const existingOrphans = new Set(
+              existingRows
+                ?.filter(m => !m.recurrente_template_id)
+                .map(m => `${m.concepto}::${m.cuenta_id}`) ?? []
+            );
 
             const pending = templates.filter(t => {
               if (existingTemplateIds.has(t.id)) return false;
+              if (existingOrphans.has(`${t.concepto}::${t.cuenta_id}`)) return false;
               const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
               return actualDay <= currentDay;
             });
