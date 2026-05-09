@@ -214,7 +214,12 @@ export function useMovimientos() {
                 }
               });
 
-              const { error } = await supabase.from('movimientos').insert(movimientosToCreate);
+              const { error } = await supabase
+                .from('movimientos')
+                .upsert(movimientosToCreate, {
+                  onConflict: 'user_id,recurrente_template_id,mes_referencia,cuenta_id',
+                  ignoreDuplicates: true
+                });
 
               if (!error) {
                 const { data: updated } = await supabase
