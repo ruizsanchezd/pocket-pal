@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { format, parse, addMonths, subMonths, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useWebHaptics } from 'web-haptics/react';
@@ -60,6 +60,9 @@ export function useMovimientos() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMovimiento, setEditingMovimiento] = useState<MovimientoConRelaciones | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Guard to prevent concurrent auto-generation if the effect fires more than once
+  const isAutoGeneratingRef = useRef(false);
 
   // Filters
   const [filtroCategoria, setFiltroCategoria] = useState<string>('__all__');
@@ -130,87 +133,102 @@ export function useMovimientos() {
 
       setRawMovimientos((movimientosData ?? []) as Movimiento[]);
 
-      // Auto-generate recurrentes for current month if any are due today or earlier
-      if (currentMonth === format(new Date(), 'yyyy-MM')) {
-        const today = new Date();
-        const currentDay = today.getDate();
-        const date = parse(currentMonth, 'yyyy-MM', new Date());
-        const daysInMonth = getDaysInMonth(date);
+      // Auto-generate recurrentes for current month if any are due today or earlier.
+      // Guard prevents concurrent runs (e.g. if the effect fires twice in quick succession).
+      if (currentMonth === format(new Date(), 'yyyy-MM') && !isAutoGeneratingRef.current) {
+        isAutoGeneratingRef.current = true;
+        try {
+          const today = new Date();
+          const currentDay = today.getDate();
+          const date = parse(currentMonth, 'yyyy-MM', new Date());
+          const daysInMonth = getDaysInMonth(date);
 
-        const { data: templates } = await supabase
-          .from('gastos_recurrentes')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('activo', true);
+          const { data: templates } = await supabase
+            .from('gastos_recurrentes')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('activo', true);
 
-        if (templates?.length) {
-          const existingTemplateIds = new Set(
-            movimientosData
-              ?.filter(m => m.es_recurrente && m.recurrente_template_id)
-              .map(m => m.recurrente_template_id) ?? []
-          );
+          if (templates?.length) {
+            // Re-query DB for existing recurrentes to get the freshest state,
+            // avoiding the race condition where two concurrent runs both see
+            // an empty set and both insert the same templates.
+            const { data: existingRows } = await supabase
+              .from('movimientos')
+              .select('recurrente_template_id')
+              .eq('user_id', user.id)
+              .eq('mes_referencia', currentMonth)
+              .eq('es_recurrente', true)
+              .not('recurrente_template_id', 'is', null);
 
-          const pending = templates.filter(t => {
-            if (existingTemplateIds.has(t.id)) return false;
-            const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
-            return actualDay <= currentDay;
-          });
+            const existingTemplateIds = new Set(
+              existingRows?.map(m => m.recurrente_template_id).filter(Boolean) ?? []
+            );
 
-          if (pending.length > 0) {
-            const movimientosToCreate: MovimientoInsert[] = [];
-
-            pending.forEach(t => {
+            const pending = templates.filter(t => {
+              if (existingTemplateIds.has(t.id)) return false;
               const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
-              const fechaStr = format(
-                new Date(date.getFullYear(), date.getMonth(), actualDay),
-                'yyyy-MM-dd'
-              );
+              return actualDay <= currentDay;
+            });
 
-              movimientosToCreate.push({
-                user_id: user.id,
-                fecha: fechaStr,
-                concepto: t.concepto,
-                cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
-                cuenta_id: t.cuenta_id,
-                categoria_id: t.categoria_id,
-                subcategoria_id: t.subcategoria_id,
-                notas: t.notas,
-                es_recurrente: true,
-                recurrente_template_id: t.id,
-                mes_referencia: currentMonth
-              });
+            if (pending.length > 0) {
+              const movimientosToCreate: MovimientoInsert[] = [];
 
-              if (t.is_transfer && t.destination_account_id) {
+              pending.forEach(t => {
+                const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
+                const fechaStr = format(
+                  new Date(date.getFullYear(), date.getMonth(), actualDay),
+                  'yyyy-MM-dd'
+                );
+
                 movimientosToCreate.push({
                   user_id: user.id,
                   fecha: fechaStr,
                   concepto: t.concepto,
-                  cantidad: Math.abs(t.cantidad),
-                  cuenta_id: t.destination_account_id,
+                  cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
+                  cuenta_id: t.cuenta_id,
                   categoria_id: t.categoria_id,
                   subcategoria_id: t.subcategoria_id,
-                  notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
+                  notas: t.notas,
                   es_recurrente: true,
                   recurrente_template_id: t.id,
                   mes_referencia: currentMonth
                 });
+
+                if (t.is_transfer && t.destination_account_id) {
+                  movimientosToCreate.push({
+                    user_id: user.id,
+                    fecha: fechaStr,
+                    concepto: t.concepto,
+                    cantidad: Math.abs(t.cantidad),
+                    cuenta_id: t.destination_account_id,
+                    categoria_id: t.categoria_id,
+                    subcategoria_id: t.subcategoria_id,
+                    notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
+                    es_recurrente: true,
+                    recurrente_template_id: t.id,
+                    mes_referencia: currentMonth
+                  });
+                }
+              });
+
+              const { error } = await supabase.from('movimientos').insert(movimientosToCreate);
+
+              if (!error) {
+                const { data: updated } = await supabase
+                  .from('movimientos')
+                  .select('*')
+                  .eq('user_id', user.id)
+                  .eq('mes_referencia', currentMonth)
+                  .order('fecha', { ascending: false })
+                  .order('created_at', { ascending: false });
+
+                setRawMovimientos((updated ?? []) as Movimiento[]);
               }
-            });
-
-            const { error } = await supabase.from('movimientos').insert(movimientosToCreate);
-
-            if (!error) {
-              const { data: updated } = await supabase
-                .from('movimientos')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('mes_referencia', currentMonth)
-                .order('fecha', { ascending: false })
-                .order('created_at', { ascending: false });
-
-              setRawMovimientos((updated ?? []) as Movimiento[]);
             }
           }
+        } finally {
+          isAutoGeneratingRef.current = false;
         }
       }
 
