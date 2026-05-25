@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { gastoRecurrenteSchema, type GastoRecurrenteFormData } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Switch } from '@/components/ui/switch';
 import {
   Form,
@@ -129,16 +130,13 @@ export function GastoRecurrenteForm({
                 {isTransfer ? 'Cantidad a transferir *' : 'Cantidad * (negativo = gasto)'}
               </FormLabel>
               <FormControl>
-                <Input
-                  type="number"
-                  step="0.01"
+                <NumericInput
                   placeholder={isTransfer ? '200' : '-900'}
-                  {...field}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    field.onChange(value ? parseFloat(value) : undefined);
-                  }}
-                  value={field.value ?? ''}
+                  value={field.value ?? undefined}
+                  onValueChange={field.onChange}
+                  name={field.name}
+                  ref={field.ref}
+                  onBlur={field.onBlur}
                 />
               </FormControl>
               <FormMessage />

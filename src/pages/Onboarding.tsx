@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -101,11 +102,10 @@ export default function Onboarding() {
     ));
   };
 
-  const updateGastoCantidad = (id: string, value: string) => {
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed)) {
+  const updateGastoCantidad = (id: string, value: number | undefined) => {
+    if (value !== undefined) {
       setGastosRecurrentes(gastosRecurrentes.map(g =>
-        g.id === id ? { ...g, cantidad: parsed } : g
+        g.id === id ? { ...g, cantidad: value } : g
       ));
     }
   };
@@ -420,22 +420,20 @@ export default function Onboarding() {
                       
                       <div className="space-y-2">
                         <Label>Saldo inicial</Label>
-                        <Input
-                          type="number"
+                        <NumericInput
                           placeholder="0"
-                          value={cuenta.saldo_inicial || ''}
-                          onChange={(e) => updateCuenta(cuenta.id, 'saldo_inicial', parseFloat(e.target.value) || 0)}
+                          value={cuenta.saldo_inicial ?? undefined}
+                          onValueChange={(v) => updateCuenta(cuenta.id, 'saldo_inicial', v ?? 0)}
                         />
                       </div>
                       
                       {cuenta.tipo === 'monedero' && (
                         <div className="space-y-2">
                           <Label>Recarga mensual</Label>
-                          <Input
-                            type="number"
+                          <NumericInput
                             placeholder="200"
-                            value={cuenta.recarga_mensual || ''}
-                            onChange={(e) => updateCuenta(cuenta.id, 'recarga_mensual', parseFloat(e.target.value) || 0)}
+                            value={cuenta.recarga_mensual ?? undefined}
+                            onValueChange={(v) => updateCuenta(cuenta.id, 'recarga_mensual', v ?? 0)}
                           />
                         </div>
                       )}
@@ -520,11 +518,9 @@ export default function Onboarding() {
                                 </SelectContent>
                               </Select>
                             )}
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <NumericInput
                               value={gasto.cantidad}
-                              onChange={(e) => updateGastoCantidad(gasto.id, e.target.value)}
+                              onValueChange={(v) => updateGastoCantidad(gasto.id, v)}
                               className={`w-24 h-7 text-right px-2 font-medium ${gasto.cantidad >= 0 ? 'text-green-600' : 'text-destructive'}`}
                             />
                             <Input
@@ -558,7 +554,8 @@ export default function Onboarding() {
                     onChange={(e) => setCustomGasto({ ...customGasto, concepto: e.target.value })}
                   />
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="-50 o 2000"
                     className="w-32"
                     value={customGasto.cantidad}
