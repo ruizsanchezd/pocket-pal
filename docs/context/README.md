@@ -13,6 +13,7 @@ Cada archivo explica *por qué* las cosas están como están — el *qué* lo cu
 | [`known-issues.md`](./known-issues.md) | Bug, regresión, o tocas un área frágil ya conocida. |
 | [`testing.md`](./testing.md) | Escribes tests o decides qué verificar manualmente. |
 | [`deployment.md`](./deployment.md) | Variables de entorno, despliegue, aplicar migraciones. |
+| [`prompting-claude-code.md`](./prompting-claude-code.md) | Construyes un prompt para pasarle a Claude Code (CLI). Plantilla + reglas. |
 
 ## Mantenimiento
 

@@ -15,6 +15,7 @@ Carga selectivamente desde `docs/context/` según la tarea. Índice y guía en
 - `known-issues.md` — bugs recurrentes y áreas frágiles (consultar antes de tocar dominio).
 - `testing.md` — qué se testea, qué se verifica a mano.
 - `deployment.md` — Vercel, Supabase, migraciones, env vars.
+- `prompting-claude-code.md` — plantilla y reglas para prompts que vienen de Claude.ai.
 
 ## Project Overview
 
