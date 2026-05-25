@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { cuentaSchema, type CuentaFormData } from '@/lib/validations';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumericInput } from '@/components/ui/numeric-input';
 import {
   Form,
   FormControl,
@@ -144,12 +145,12 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
                 <FormItem>
                   <FormLabel>Saldo actual</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                      value={field.value ?? ''}
+                    <NumericInput
+                      value={field.value ?? undefined}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
                     />
                   </FormControl>
                   <FormMessage />
@@ -164,11 +165,12 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
                 <FormItem>
                   <FormLabel>Saldo inicial</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    <NumericInput
+                      value={field.value ?? undefined}
+                      onValueChange={(v) => field.onChange(v ?? 0)}
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
                     />
                   </FormControl>
                   <FormMessage />
@@ -186,13 +188,13 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
               <FormItem>
                 <FormLabel>Recarga mensual</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <NumericInput
                     placeholder="200"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || undefined)}
-                    value={field.value ?? ''}
+                    value={field.value ?? undefined}
+                    onValueChange={field.onChange}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
                   />
                 </FormControl>
                 <FormMessage />
@@ -209,13 +211,13 @@ export function CuentaForm({ initialData, saldoActual, onSubmit, onCancel }: Cue
               <FormItem>
                 <FormLabel>Capital inicial invertido</FormLabel>
                 <FormControl>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <NumericInput
                     placeholder="10000"
-                    {...field}
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    value={field.value ?? 0}
+                    value={field.value ?? undefined}
+                    onValueChange={(v) => field.onChange(v ?? 0)}
+                    name={field.name}
+                    ref={field.ref}
+                    onBlur={field.onBlur}
                   />
                 </FormControl>
                 <FormMessage />
