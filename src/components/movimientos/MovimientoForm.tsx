@@ -54,7 +54,9 @@ export function MovimientoForm({
   const { user } = useAuth();
   const haptic = useWebHaptics();
   const isMobile = useIsMobile();
-  const prevSignRef = useRef<1 | -1>(1);
+  const prevSignRef = useRef<1 | -1>(
+    initialData?.cantidad !== undefined ? (Number(initialData.cantidad) >= 0 ? 1 : -1) : 1
+  );
   const [sign, setSign] = useState<1 | -1>(() => {
     if (initialData?.cantidad !== undefined) return Number(initialData.cantidad) >= 0 ? 1 : -1;
     return -1;
@@ -102,8 +104,10 @@ export function MovimientoForm({
     if (current !== undefined) {
       form.setValue('cantidad', Math.abs(Number(current)) * newSign, { shouldValidate: true });
     }
-    form.setValue('categoria_id', '');
-    form.setValue('subcategoria_id', undefined);
+    if (!initialData) {
+      form.setValue('categoria_id', '');
+      form.setValue('subcategoria_id', undefined);
+    }
   };
 
   const filteredCategorias = useMemo(() => {
@@ -241,8 +245,10 @@ export function MovimientoForm({
                       if (Number.isFinite(n)) {
                         const newSign: 1 | -1 = n < 0 ? -1 : 1;
                         if (newSign !== prevSignRef.current) {
-                          form.setValue('categoria_id', '');
-                          form.setValue('subcategoria_id', undefined);
+                          if (!initialData) {
+                            form.setValue('categoria_id', '');
+                            form.setValue('subcategoria_id', undefined);
+                          }
                           prevSignRef.current = newSign;
                         }
                         field.onChange(n);
