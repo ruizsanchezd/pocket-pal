@@ -2,6 +2,20 @@
 
 This file provides guidance for Claude Code when working with this repository.
 
+## Context docs
+
+Carga selectivamente desde `docs/context/` según la tarea. Índice y guía en
+[`docs/context/README.md`](./docs/context/README.md). Archivos clave:
+
+- `architecture.md` — stack, capas, dónde vive cada cosa.
+- `database.md` — schema, RLS, migraciones notables.
+- `domain-logic.md` — saldos, recurrentes, snapshots, signo de cantidad.
+- `forms-and-validation.md` — patrones de form + trampas conocidas.
+- `ui-patterns.md` — Dialog/Drawer, toasts, theming.
+- `known-issues.md` — bugs recurrentes y áreas frágiles (consultar antes de tocar dominio).
+- `testing.md` — qué se testea, qué se verifica a mano.
+- `deployment.md` — Vercel, Supabase, migraciones, env vars.
+
 ## Project Overview
 
 **PocketPal** - A personal finance management app built with React 18 + TypeScript + Vite + Tailwind CSS + shadcn-ui + Supabase.
