@@ -218,6 +218,7 @@ export function MovimientoForm({
                     type="text"
                     inputMode="decimal"
                     placeholder="Ej: -20.50 o 1500"
+                    autoFocus={!initialData && !disableAutoFocus}
                     value={cantidadStrDesktop}
                     onChange={(e) => {
                       const raw = e.target.value;
@@ -259,7 +260,7 @@ export function MovimientoForm({
             <FormItem>
               <FormLabel>Concepto *</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Compra supermercado" autoFocus={!initialData && !disableAutoFocus} {...field} />
+                <Input placeholder="Ej: Compra supermercado" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
