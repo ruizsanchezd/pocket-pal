@@ -84,7 +84,7 @@ export function MovimientoForm({
   useEffect(() => {
     if (!disableAutoFocus || initialData) return; // solo nuevo movimiento en mobile
     const timer = setTimeout(() => {
-      form.setFocus('concepto');
+      form.setFocus('cantidad');
       // El teclado ya está abierto (hidden input trick), solo centrar el campo
       setTimeout(() => {
         const el = document.activeElement as HTMLElement | null;
@@ -174,20 +174,6 @@ export function MovimientoForm({
 
         <FormField
           control={form.control}
-          name="concepto"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Concepto *</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej: Compra supermercado" autoFocus={!initialData && !disableAutoFocus} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="cantidad"
           render={({ field }) => (
             <FormItem>
@@ -260,6 +246,20 @@ export function MovimientoForm({
                     )}
                   />
                 )}
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="concepto"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Concepto *</FormLabel>
+              <FormControl>
+                <Input placeholder="Ej: Compra supermercado" autoFocus={!initialData && !disableAutoFocus} {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
