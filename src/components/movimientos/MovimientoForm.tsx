@@ -54,6 +54,7 @@ export function MovimientoForm({
   const { user } = useAuth();
   const haptic = useWebHaptics();
   const isMobile = useIsMobile();
+  const cantidadMobileRef = useRef<HTMLInputElement>(null);
   const prevSignRef = useRef<1 | -1>(
     initialData?.cantidad !== undefined ? (Number(initialData.cantidad) >= 0 ? 1 : -1) : 1
   );
@@ -84,11 +85,10 @@ export function MovimientoForm({
   useEffect(() => {
     if (!disableAutoFocus || initialData) return; // solo nuevo movimiento en mobile
     const timer = setTimeout(() => {
-      form.setFocus('cantidad');
+      cantidadMobileRef.current?.focus();
       // El teclado ya está abierto (hidden input trick), solo centrar el campo
       setTimeout(() => {
-        const el = document.activeElement as HTMLElement | null;
-        el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        cantidadMobileRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }, 300);
     }, 500);
     return () => clearTimeout(timer);
@@ -194,6 +194,7 @@ export function MovimientoForm({
                       {sign === 1 ? '+' : '−'}
                     </Button>
                     <Input
+                      ref={cantidadMobileRef}
                       type="text"
                       inputMode="decimal"
                       placeholder="0.00"
