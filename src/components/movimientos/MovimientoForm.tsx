@@ -28,6 +28,7 @@ import { CreatableSelect } from '@/components/ui/creatable-select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { randomCategoriaColor } from '@/lib/colors';
 
 interface MovimientoFormProps {
   cuentas: Cuenta[];
@@ -328,7 +329,7 @@ export function MovimientoForm({
                         nombre,
                         parent_id: null,
                         tipo,
-                        color: '#6b7280', // Default gray
+                        color: randomCategoriaColor(),
                         orden: 999
                       })
                       .select()
@@ -383,7 +384,7 @@ export function MovimientoForm({
                           nombre,
                           parent_id: categoriaId,
                           tipo: parentCategoria.tipo,
-                          color: parentCategoria.color,
+                          color: randomCategoriaColor(),
                           orden: 999
                         })
                         .select()
