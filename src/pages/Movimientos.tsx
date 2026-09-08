@@ -57,6 +57,16 @@ import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
+/**
+ * TEMPORAL — repaso de la importación del verano 2026.
+ * Los movimientos importados llevan `notas` con el prefijo `[verano]` y se pintan
+ * resaltados para poder revisarlos de un vistazo. Para quitarlo: revertir este
+ * commit y ejecutar `quitar-marca.sql`, que limpia el prefijo de las notas.
+ */
+const MARCA_IMPORTADO = '[verano]';
+const esImportado = (m: { notas?: string | null }) =>
+  m.notas?.startsWith(MARCA_IMPORTADO) ?? false;
+
 export default function Movimientos() {
   const {
     cuentas,
@@ -509,7 +519,11 @@ export default function Movimientos() {
                         onThresholdReached={() => haptic.trigger('warning')}
                       >
                         <div
-                          className="flex items-center justify-between px-6 py-3 cursor-pointer active:bg-muted/40 transition-colors"
+                          className={cn(
+                            "flex items-center justify-between px-6 py-3 cursor-pointer active:bg-muted/40 transition-colors",
+                            esImportado(movimiento) &&
+                              "bg-amber-100/70 dark:bg-amber-500/15 border-l-2 border-amber-500"
+                          )}
                           onClick={() => handleEditMovimiento(movimiento)}
                         >
                           <div className="flex-1 min-w-0 pr-3">
@@ -562,7 +576,15 @@ export default function Movimientos() {
                       </TableHeader>
                       <TableBody>
                         {filteredMovimientos.map((movimiento) => (
-                        <TableRow key={movimiento.id} className="group cursor-pointer" onClick={() => handleEditMovimiento(movimiento)}>
+                        <TableRow
+                          key={movimiento.id}
+                          className={cn(
+                            "group cursor-pointer",
+                            esImportado(movimiento) &&
+                              "bg-amber-100/70 hover:bg-amber-100 dark:bg-amber-500/15 dark:hover:bg-amber-500/25"
+                          )}
+                          onClick={() => handleEditMovimiento(movimiento)}
+                        >
                           <TableCell className="font-medium">
                             {format(new Date(movimiento.fecha), 'dd/MM')}
                           </TableCell>
