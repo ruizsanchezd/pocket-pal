@@ -338,7 +338,9 @@ export type Database = {
           notas: string | null
           saldo_calculado: number | null
           saldo_registrado: number | null
+          tipo: string | null
           tipo_cambio: number | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -349,7 +351,9 @@ export type Database = {
           notas?: string | null
           saldo_calculado?: number | null
           saldo_registrado?: number | null
+          tipo?: string | null
           tipo_cambio?: number | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -360,7 +364,9 @@ export type Database = {
           notas?: string | null
           saldo_calculado?: number | null
           saldo_registrado?: number | null
+          tipo?: string | null
           tipo_cambio?: number | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
