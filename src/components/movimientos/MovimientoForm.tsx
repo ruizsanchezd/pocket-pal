@@ -52,6 +52,7 @@ export function MovimientoForm({
   disableAutoFocus = false,
 }: MovimientoFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fechaOpen, setFechaOpen] = useState(false);
   const { user } = useAuth();
   const haptic = useWebHaptics();
   const isMobile = useIsMobile();
@@ -140,7 +141,7 @@ export function MovimientoForm({
           render={({ field }) => (
             <FormItem className="flex flex-col">
               <FormLabel>Fecha *</FormLabel>
-              <Popover>
+              <Popover open={fechaOpen} onOpenChange={setFechaOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
@@ -163,7 +164,11 @@ export function MovimientoForm({
                   <Calendar
                     mode="single"
                     selected={field.value}
-                    onSelect={field.onChange}
+                    onSelect={(date) => {
+                      if (!date) return;
+                      field.onChange(date);
+                      setFechaOpen(false);
+                    }}
                     initialFocus
                   />
                 </PopoverContent>
