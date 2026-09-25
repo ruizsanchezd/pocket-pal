@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { format, subMonths, startOfMonth, addMonths } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAll } from '@/lib/fetch-all';
 
 /** Nunca retrocedemos más de esto, por si el usuario tiene años de histórico. */
 const MAX_BACKFILL_MONTHS = 24;
@@ -67,23 +68,34 @@ export function useAutoSnapshot(userId: string | undefined) {
         const now = new Date();
         const currentMonthStart = startOfMonth(now);
 
-        const [{ data: cuentas }, { data: movimientos }, { data: snapshots }] = await Promise.all([
+        const [{ data: cuentas }, movimientos, snapshots] = await Promise.all([
           supabase.from('cuentas').select('*').eq('user_id', userId).eq('activa', true),
-          supabase
-            .from('movimientos')
-            .select('cuenta_id, cantidad, fecha, created_at')
-            .eq('user_id', userId)
-            .lt('fecha', format(currentMonthStart, 'yyyy-MM-dd')),
-          supabase
-            .from('snapshots_patrimonio')
-            .select('id, mes, cuenta_id, tipo, saldo_calculado, saldo_registrado, updated_at')
-            .eq('user_id', userId),
+          // Todo el histórico: paginado, porque un snapshot calculado con filas de menos se
+          // guardaría en BD como si fuera correcto.
+          fetchAll<{ cuenta_id: string; cantidad: number; fecha: string; created_at: string }>((from, to) =>
+            supabase
+              .from('movimientos')
+              .select('cuenta_id, cantidad, fecha, created_at')
+              .eq('user_id', userId)
+              .lt('fecha', format(currentMonthStart, 'yyyy-MM-dd'))
+              .order('id')
+              .range(from, to)
+          ),
+          // También paginado: un snapshot manual que no se viera aquí se pisaría en el upsert.
+          fetchAll<SnapshotRow>((from, to) =>
+            supabase
+              .from('snapshots_patrimonio')
+              .select('id, mes, cuenta_id, tipo, saldo_calculado, saldo_registrado, updated_at')
+              .eq('user_id', userId)
+              .order('id')
+              .range(from, to)
+          ),
         ]);
 
-        if (!cuentas?.length || !movimientos?.length) return;
+        if (!cuentas?.length || !movimientos.length) return;
 
         const snapsByKey = new Map<string, SnapshotRow>();
-        ((snapshots ?? []) as SnapshotRow[]).forEach((s) => snapsByKey.set(`${s.cuenta_id}|${s.mes}`, s));
+        snapshots.forEach((s) => snapsByKey.set(`${s.cuenta_id}|${s.mes}`, s));
 
         const earliestMovement = movimientos.reduce(
           (min, m) => (m.fecha < min ? m.fecha : min),
@@ -108,7 +120,7 @@ export function useAutoSnapshot(userId: string | undefined) {
 
           // Último valor conocido antes de la ventana, para arrastrar en cuentas de inversión.
           let lastKnown: number | null = null;
-          const priorSnaps = ((snapshots ?? []) as SnapshotRow[])
+          const priorSnaps = snapshots
             .filter((s) => s.cuenta_id === cuenta.id && s.mes < months[0])
             .sort((a, b) => a.mes.localeCompare(b.mes));
           if (priorSnaps.length) {

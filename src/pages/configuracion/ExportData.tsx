@@ -19,7 +19,8 @@ import {
   generateCategoriasCSV, 
   generateRecurrentesCSV 
 } from '@/lib/export';
-import { Cuenta, Categoria, GastoRecurrente, MovimientoConRelaciones } from '@/types/database';
+import { Cuenta, Categoria, GastoRecurrente, Movimiento, MovimientoConRelaciones } from '@/types/database';
+import { fetchAll } from '@/lib/fetch-all';
 
 // Generate list of last 24 months (most recent first)
 function getLast24Months() {
@@ -51,16 +52,22 @@ export default function ExportData() {
     try {
       // Fetch all data in parallel
       const [
-        { data: movimientosData },
+        movimientosData,
         { data: cuentasData },
         { data: categoriasData },
         { data: recurrentesData }
       ] = await Promise.all([
-        supabase
-          .from('movimientos')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('fecha', { ascending: true }),
+        // Paginado: es el backup completo, no puede quedarse en las primeras 1000 filas.
+        fetchAll<Movimiento>((from, to) =>
+          supabase
+            .from('movimientos')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('fecha', { ascending: true })
+            .order('created_at', { ascending: true })
+            .order('id')
+            .range(from, to)
+        ),
         supabase
           .from('cuentas')
           .select('*')
@@ -83,7 +90,7 @@ export default function ExportData() {
       const recurrentes = (recurrentesData || []) as GastoRecurrente[];
 
       // Map movements with relations
-      const movimientos: MovimientoConRelaciones[] = (movimientosData || []).map(m => ({
+      const movimientos: MovimientoConRelaciones[] = movimientosData.map(m => ({
         ...m,
         cuenta: cuentas.find(c => c.id === m.cuenta_id),
         categoria: categorias.find(c => c.id === m.categoria_id),

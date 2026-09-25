@@ -11,6 +11,7 @@ import { Loader2, TrendingUp, TrendingDown, Wallet, PiggyBank, BarChart3 } from 
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import { useCuentas } from '@/hooks/useStaticData';
+import { calcularSaldos, fetchMovimientosParaSaldos } from '@/lib/saldos';
 import {
   LineChart,
   Line,
@@ -94,59 +95,12 @@ export default function Dashboard() {
       if (cuentasData.length > 0) {
         const now = new Date();
 
-        // For each account, calculate current balance
-        const cuentasConSaldo: CuentaConSaldo[] = await Promise.all(
-          cuentasData.map(async (cuenta) => {
-            const { data: movimientos } = await supabase
-              .from('movimientos')
-              .select('cantidad')
-              .eq('cuenta_id', cuenta.id);
-
-            const sumaMovimientos = movimientos?.reduce(
-              (sum, m) => sum + Number(m.cantidad),
-              0
-            ) || 0;
-
-            // For monedero type, get monthly expenses
-            let gastosMes = 0;
-            if (cuenta.tipo === 'monedero') {
-              const currentMonth = format(new Date(), 'yyyy-MM');
-              const { data: gastosMesData } = await supabase
-                .from('movimientos')
-                .select('cantidad')
-                .eq('cuenta_id', cuenta.id)
-                .eq('mes_referencia', currentMonth)
-                .lt('cantidad', 0);
-              
-              gastosMes = gastosMesData?.reduce(
-                (sum, m) => sum + Math.abs(Number(m.cantidad)),
-                0
-              ) || 0;
-            }
-
-            // For inversion type, calculate invested (deposits) and returns
-            let invertido = 0;
-            let rendimiento = 0;
-            if (cuenta.tipo === 'inversion') {
-              // Capital inicial + sum of all positive movements (deposits)
-              const capitalInicial = Number(cuenta.capital_inicial_invertido) || 0;
-              const depositos = movimientos
-                ?.filter(m => Number(m.cantidad) > 0)
-                .reduce((sum, m) => sum + Number(m.cantidad), 0) || 0;
-
-              invertido = capitalInicial + depositos;
-              const saldoActual = Number(cuenta.saldo_inicial) + sumaMovimientos;
-              rendimiento = saldoActual - invertido;
-            }
-
-            return {
-              ...cuenta,
-              saldo_actual: Number(cuenta.saldo_inicial) + sumaMovimientos,
-              gastos_mes: gastosMes,
-              invertido,
-              rendimiento
-            } as CuentaConSaldo;
-          })
+        // Una sola query paginada para todas las cuentas; la regla de saldo vive en lib/saldos.
+        const movimientosSaldo = await fetchMovimientosParaSaldos(cuentasData.map(c => c.id));
+        const cuentasConSaldo: CuentaConSaldo[] = calcularSaldos(
+          cuentasData,
+          movimientosSaldo,
+          format(now, 'yyyy-MM')
         );
 
         setCuentas(cuentasConSaldo);
@@ -257,12 +211,21 @@ export default function Dashboard() {
       setDashboardLoading(false);
     };
 
-    fetchData();
+    fetchData().catch((error) => {
+      if (import.meta.env.DEV) console.error('Error cargando el dashboard:', error);
+      setDashboardLoading(false);
+    });
   }, [user, rawCuentas, cuentasLoading]);
 
   const currency = profile?.divisa_principal || 'EUR';
 
-  const handleChartClick = (data: any) => {
+  // Solo lo que usamos del estado que recharts pasa a onClick.
+  type ChartClickState = {
+    activePayload?: Array<{ payload: PatrimonioData }>;
+    activeCoordinate?: { x: number; y: number };
+  } | null;
+
+  const handleChartClick = (data: ChartClickState) => {
     if (!data?.activePayload?.[0]) return;
     const payload = data.activePayload[0].payload as PatrimonioData;
     if (!payload.mesKey) return;
@@ -573,7 +536,7 @@ export default function Dashboard() {
                         dataKey="patrimonio"
                         stroke="hsl(var(--primary))"
                         strokeWidth={2}
-                        dot={(props: any) => {
+                        dot={(props: { key?: string; index: number; cx?: number; cy?: number }) => {
                           const isSelected = selectedMesDetalle?.mesKey === patrimonioData[props.index]?.mesKey;
                           return (
                             <circle

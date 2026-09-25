@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { Cuenta } from '@/types/database';
+import { calcularSaldos, fetchMovimientosParaSaldos } from '@/lib/saldos';
+import { format } from 'date-fns';
 
 /**
- * Given an array of accounts, fetches ALL movements for the user in a single
- * query, groups/sums by cuenta_id in the frontend, and returns a map of
- * { [cuenta_id]: saldo_inicial + sumaMovimientos }.
+ * Saldo actual de cada cuenta: `{ [cuenta_id]: saldo_inicial + Σ movimientos }`.
+ * Misma regla y misma query paginada que el Dashboard (ver `lib/saldos.ts`).
  *
  * The reference to `cuentas` should come from state (not an inline array) to
  * avoid unnecessary re-fetches on every render.
@@ -26,31 +26,17 @@ export function useAccountBalances(cuentas: Cuenta[]): {
     let cancelled = false;
     setLoading(true);
 
-    // Single query: fetch cantidad + cuenta_id for all accounts at once
-    const cuentaIds = cuentas.map(c => c.id);
-
-    supabase
-      .from('movimientos')
-      .select('cantidad, cuenta_id')
-      .in('cuenta_id', cuentaIds)
-      .then(({ data }) => {
+    fetchMovimientosParaSaldos(cuentas.map(c => c.id))
+      .then(movimientos => {
         if (cancelled) return;
-
-        // Sum movements grouped by cuenta_id
-        const sumasPorCuenta: Record<string, number> = {};
-        data?.forEach(m => {
-          sumasPorCuenta[m.cuenta_id] = (sumasPorCuenta[m.cuenta_id] || 0) + Number(m.cantidad);
-        });
-
-        // Build balance map: saldo_inicial + sum of movements
-        const map: Record<string, number> = {};
-        cuentas.forEach(cuenta => {
-          const suma = sumasPorCuenta[cuenta.id] || 0;
-          map[cuenta.id] = Number(cuenta.saldo_inicial) + suma;
-        });
-
-        setBalances(map);
-        setLoading(false);
+        const conSaldo = calcularSaldos(cuentas, movimientos, format(new Date(), 'yyyy-MM'));
+        setBalances(Object.fromEntries(conSaldo.map(c => [c.id, c.saldo_actual])));
+      })
+      .catch(error => {
+        if (import.meta.env.DEV) console.error('Error calculando saldos:', error);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
 
     return () => { cancelled = true; };

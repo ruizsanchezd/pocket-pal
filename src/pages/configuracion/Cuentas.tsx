@@ -53,6 +53,7 @@ import { Cuenta, CuentaMonederoConfig } from '@/types/database';
 import { CuentaFormData } from '@/lib/validations';
 import { formatCurrency } from '@/lib/format';
 import { useAccountBalances } from '@/hooks/useAccountBalances';
+import { fetchAll } from '@/lib/fetch-all';
 import { cn } from '@/lib/utils';
 import { MobileSubpageHeader } from '@/components/configuracion/MobileSubpageHeader';
 import { format, subMonths } from 'date-fns';
@@ -190,15 +191,20 @@ export default function ConfigCuentas() {
         // Check if balance was overridden
         if (data.saldo_actual !== undefined && data.saldo_actual !== editingCuenta.saldo_actual) {
           // Balance override: recalculate saldo_inicial
-          const { data: movimientos } = await supabase
-            .from('movimientos')
-            .select('cantidad')
-            .eq('cuenta_id', editingCuenta.id);
+          // Paginado: con la suma truncada se guardaría un saldo_inicial incorrecto.
+          const movimientos = await fetchAll<{ cantidad: number }>((from, to) =>
+            supabase
+              .from('movimientos')
+              .select('cantidad')
+              .eq('cuenta_id', editingCuenta.id)
+              .order('id')
+              .range(from, to)
+          );
 
-          const sumaMovimientos = movimientos?.reduce(
+          const sumaMovimientos = movimientos.reduce(
             (sum, m) => sum + Number(m.cantidad),
             0
-          ) || 0;
+          );
 
           const nuevoSaldoInicial = data.saldo_actual - sumaMovimientos;
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAll } from '@/lib/fetch-all';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -84,26 +85,26 @@ export function DistribucionSection() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Build query for movements (categorias come from React Query cache)
-        let query = supabase
-          .from('movimientos')
-          .select('*')
-          .eq('user_id', user.id)
-          .gte('fecha', dateRange.fechaDesde)
-          .lte('fecha', dateRange.fechaHasta);
+        // Paginado: un año entero puede pasar de 1000 movimientos (categorias come from React Query cache)
+        const movimientosData = await fetchAll<Movimiento>((from, to) => {
+          let query = supabase
+            .from('movimientos')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('fecha', dateRange.fechaDesde)
+            .lte('fecha', dateRange.fechaHasta);
 
-        // Apply type filter
-        if (tipoMovimiento === 'gastos') {
-          query = query.lt('cantidad', 0);
-        } else if (tipoMovimiento === 'ingresos') {
-          query = query.gt('cantidad', 0);
-        }
+          // Apply type filter
+          if (tipoMovimiento === 'gastos') {
+            query = query.lt('cantidad', 0);
+          } else if (tipoMovimiento === 'ingresos') {
+            query = query.gt('cantidad', 0);
+          }
 
-        const { data: movimientosData } = await query;
+          return query.order('id').range(from, to);
+        });
 
-        if (movimientosData) {
-          setMovimientos(movimientosData as Movimiento[]);
-        }
+        setMovimientos(movimientosData);
       } catch (err) {
         if (import.meta.env.DEV) console.error('Error fetching data:', err);
       } finally {
