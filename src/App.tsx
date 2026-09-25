@@ -24,6 +24,7 @@ const ConfigCuentas = lazy(() => import("./pages/configuracion/Cuentas"));
 const ConfigCategorias = lazy(() => import("./pages/configuracion/Categorias"));
 const ConfigRecurrentes = lazy(() => import("./pages/configuracion/Recurrentes"));
 const ConfigExportData = lazy(() => import("./pages/configuracion/ExportData"));
+const ImportarExtracto = lazy(() => import("./pages/ImportarExtracto"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Sin staleTime: las páginas de configuración no invalidan ['cuentas'] / ['categorias'] al
@@ -73,6 +74,7 @@ const App = () => {
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/explorar" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/movimientos" element={<ProtectedRoute><Movimientos /></ProtectedRoute>} />
+                <Route path="/movimientos/importar" element={<ProtectedRoute><ImportarExtracto /></ProtectedRoute>} />
                 <Route path="/configuracion" element={<ProtectedRoute><Configuracion /></ProtectedRoute>} />
                 <Route path="/configuracion/cuentas" element={<ProtectedRoute><ConfigCuentas /></ProtectedRoute>} />
                 <Route path="/configuracion/categorias" element={<ProtectedRoute><ConfigCategorias /></ProtectedRoute>} />

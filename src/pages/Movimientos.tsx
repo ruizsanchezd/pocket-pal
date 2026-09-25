@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -51,6 +52,7 @@ import {
   ChevronDown,
   Search,
   X,
+  FileUp,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -173,6 +175,12 @@ export default function Movimientos() {
               </Button>
             </div>
             <div className="hidden sm:flex gap-2 shrink-0">
+              <Button variant="outline" asChild>
+                <Link to="/movimientos/importar">
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Importar extracto
+                </Link>
+              </Button>
               <Button onClick={handleCreateMovimiento}>
                 <Plus className="mr-2 h-4 w-4" />
                 Nuevo Movimiento
@@ -751,10 +759,15 @@ export default function Movimientos() {
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 pt-3 pb-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
-          <Button className="w-full h-12 text-base" onClick={handleCreateMovimiento}>
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 bg-background border-t px-4 pt-3 pb-3 flex gap-2" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+          <Button className="flex-1 h-12 text-base" onClick={handleCreateMovimiento}>
             <Plus className="mr-2 h-5 w-5" />
             Nuevo Movimiento
+          </Button>
+          <Button variant="outline" className="h-12 w-12 shrink-0 p-0" asChild>
+            <Link to="/movimientos/importar" aria-label="Importar extracto">
+              <FileUp className="h-5 w-5" />
+            </Link>
           </Button>
         </div>
       </MainLayout>

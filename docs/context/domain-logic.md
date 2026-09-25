@@ -94,3 +94,50 @@ auto-generación de recurrentes si es el mes actual.
 - Divisa por usuario en `profile.divisa_principal` (default `'EUR'`).
 - Formateo en `src/lib/format.ts` usando `Intl.NumberFormat`.
 - Fechas con `date-fns` + `locale: es`.
+
+## Importador de extractos
+
+Página `/movimientos/importar` (`pages/ImportarExtracto.tsx`). De momento solo lee el CSV de
+CaixaBank (`lib/importador/extracto-caixabank.ts`). La decisión es pura y está testeada:
+`planificarImportacion()` en `lib/importador/planificar.ts`.
+
+**Aprende de `movimientos.lineas_extracto`** (ver [database.md](./database.md)): cada movimiento
+que vino del banco dice cómo lo llamó el banco y en qué categoría quedó. No hay tabla de reglas:
+recategorizar un movimiento cambia lo que propondrá la siguiente importación. El comercio se
+compara con `claveComercio()` (sin números, signos ni acentos).
+
+Cada línea del extracto acaba en uno de cuatro tipos, por este orden:
+
+1. **`anterior`** — su huella (`fecha|importe|saldo|concepto`) ya está guardada, o es más de 7
+   días anterior a la última línea importada de esa cuenta. No se decide por posición: el
+   Spotify del día 22 puede estar enlazado (lo generó el recurrente) y un Bizum de ese mismo día,
+   debajo en el extracto, no.
+2. **`apuntada`** — ya existe sin línea del banco (apuntado a mano o generado por un
+   recurrente): mismo importe y fecha más cercana hasta 7 días, o el movimiento del recurrente
+   aprendido en el mes que toca aunque el importe no coincida (la nómina: se avisa y el usuario
+   corrige el importe a mano, como siempre). Solo se le guarda la línea; no se crea nada.
+3. **`anulada`** — cargo y devolución del mismo importe en ≤2 días (preautorizaciones de
+   gasolinera, cuota de tarjeta retrocedida). Los Bizum nunca se anulan entre sí.
+4. **`nueva`** — con propuesta y semáforo:
+   - **verde**: el mismo comercio visto ≥2 veces, siempre en la misma categoría. Si el comercio
+     cobra cosas distintas (APPLE.COM/BILL), manda el importe.
+   - **amarillo**: visto 1 vez, visto con varias categorías, parecido (misma primera palabra o
+     mismo `mas_datos`), o concepto genérico ("COMPRA CON TARJETA").
+   - **rojo**: nunca visto, o Bizum sin pista.
+   - Los movimientos de **Viajes** no enseñan: un viaje es de una vez. Para eso está el botón
+     "Estuve de viaje" (`filasDelViaje()`), que pasa un rango de fechas a una subcategoría de
+     Viajes salvo recurrentes y Vicio (el tabaco nunca va al viaje).
+   - Si siempre lo reescribió igual ("BRUNOA SPORT" → "Gimnasio"), reutiliza ese concepto; si
+     siempre fue la misma plantilla de recurrente, el nuevo lleva `recurrente_template_id` (así
+     la generación lazy no lo duplica); si siempre se apuntó el día 1 del mes siguiente
+     (alquiler, nómina), propone esa fecha.
+   - "COMPRA CON TARJETA" toma el comercio de la retención anulada de justo debajo y guarda
+     retención y devolución en `lineas_extracto` para aprender el nombre.
+   - Un Bizum recibido propone la categoría del gasto no recurrente más reciente de los 3 días
+     anteriores que lo cubre; si ese gasto es otra fila nueva, la sigue (`sigueA`) hasta que el
+     usuario toque el Bizum.
+
+Al guardar (`guardarImportacion` en `hooks/useImportador.ts`): los nuevos se insertan en una
+sola llamada con `created_at` decreciente según la posición en el extracto (el orden intradía
+de la lista sale igual que el del banco), y luego se enlazan las `apuntada`. El toast final
+tiene "Deshacer" (borra lo creado y quita las líneas enlazadas).

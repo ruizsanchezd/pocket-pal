@@ -9,7 +9,8 @@
 ## Estado actual
 
 Cubierta la lógica pura del dominio: `mesesACubrir` (snapshots), `planificarRecurrentes`
-(recurrentes: día 31, huérfanos, transferencias), `calcularSaldos` y `fetchAll`. Los hooks y
+(recurrentes: día 31, huérfanos, transferencias), `calcularSaldos`, `fetchAll` y el importador de
+extractos (`parsearExtractoCaixaBank`, `planificarImportacion`, `filasDelViaje`). Los hooks y
 la UI **se validan a mano**: no asumir red de seguridad automática al refactorizarlos.
 
 CI (`.github/workflows/ci.yml`) corre typecheck, lint, tests y build en cada push a `main`.
