@@ -250,6 +250,7 @@ export function useMovimientos() {
       notas: movimiento.notas,
       es_recurrente: movimiento.es_recurrente,
       recurrente_template_id: movimiento.recurrente_template_id,
+      lineas_extracto: movimiento.lineas_extracto,
       created_at: movimiento.created_at,
     });
 

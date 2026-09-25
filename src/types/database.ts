@@ -1,5 +1,7 @@
 // PocketPal Database Types
 
+import type { Json } from '@/integrations/supabase/types';
+
 export type CuentaTipo = 'corriente' | 'inversion' | 'monedero';
 export type CategoriaTipo = 'ingreso' | 'gasto' | 'inversion';
 export type AppRole = 'admin' | 'user';
@@ -87,8 +89,23 @@ export interface Movimiento {
   es_recurrente: boolean;
   recurrente_template_id: string | null;
   mes_referencia: string;
+  /**
+   * Líneas del extracto de las que sale (array de `LineaExtracto`). Interno del importador:
+   * no se muestra en la UI ni se exporta. Llega como JSON sin validar.
+   */
+  lineas_extracto: Json | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Una línea del extracto bancario tal como la da el banco. */
+export interface LineaExtracto {
+  fecha: string; // yyyy-MM-dd
+  fecha_valor: string | null;
+  concepto: string;
+  mas_datos: string | null;
+  importe: number;
+  saldo: number | null; // saldo tras la operación: identifica la línea
 }
 
 export interface MovimientoConRelaciones extends Movimiento {

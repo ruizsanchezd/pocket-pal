@@ -35,6 +35,14 @@ también garantizar el match — RLS lo bloquearía, pero los queries deben ser 
 - `es_recurrente bool` + `recurrente_template_id uuid NULL`:
   - FK a `gastos_recurrentes` con **ON DELETE SET NULL** (no cascade — preserva historial).
   - Si template_id es NULL pero `es_recurrente=true` → es un *huérfano* (template borrado).
+- `lineas_extracto jsonb NULL` — array de `LineaExtracto` (líneas del extracto bancario tal cual:
+  `fecha`, `fecha_valor`, `concepto`, `mas_datos`, `importe`, `saldo`). **Interno del importador**:
+  no se muestra en la UI ni va en el CSV de exportación. Es de donde aprende a categorizar (el
+  `concepto` del movimiento lo reescribe el usuario y no sirve para eso) y el `saldo` identifica
+  cada línea para no reimportarla. Array porque un movimiento puede juntar varias líneas y una
+  línea puede partirse en varios movimientos. Duplicar un movimiento **no** lo copia (la copia no
+  viene del banco); deshacer un borrado **sí** lo restaura. Rellenado para todo Caixa desde el
+  01/04/2026 cruzando el extracto (migration `20260925180000`).
 - **UNIQUE constraint** (migration `20260509110000`):
   `(user_id, recurrente_template_id, mes_referencia, cuenta_id)`. Bloquea duplicados de
   generación lazy. Incluye `cuenta_id` para que las transferencias (2 filas con mismo template)

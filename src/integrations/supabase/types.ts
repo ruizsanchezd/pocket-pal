@@ -308,6 +308,7 @@ export type Database = {
           es_recurrente: boolean | null
           fecha: string
           id: string
+          lineas_extracto: Json | null
           mes_referencia: string
           notas: string | null
           recurrente_template_id: string | null
@@ -324,6 +325,7 @@ export type Database = {
           es_recurrente?: boolean | null
           fecha: string
           id?: string
+          lineas_extracto?: Json | null
           mes_referencia: string
           notas?: string | null
           recurrente_template_id?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           es_recurrente?: boolean | null
           fecha?: string
           id?: string
+          lineas_extracto?: Json | null
           mes_referencia?: string
           notas?: string | null
           recurrente_template_id?: string | null
