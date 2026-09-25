@@ -78,8 +78,11 @@ Lee la cabecera (comentarios SQL) de cada migración para el porqué. Casos impo
 
 - **`src/types/database.ts`** — tipos escritos a mano, alineados con el schema. **Esta es la
   fuente de verdad en cliente.**
-- **`src/integrations/supabase/types.ts`** — auto-generado por Supabase. Lo usa el cliente
-  internamente, pero el código de aplicación importa desde `@/types/database`.
+- **`src/integrations/supabase/types.ts`** — auto-generado por Supabase. Tipa las queries
+  (`supabase.from(...)`), así que **hay que regenerarlo tras cada migración**
+  (`supabase gen types typescript --linked > src/integrations/supabase/types.ts`); si no, el
+  typecheck del build falla o, peor, deja de proteger columnas nuevas. El código de
+  aplicación importa los tipos de dominio desde `@/types/database`.
 
 ## Aplicar migraciones
 

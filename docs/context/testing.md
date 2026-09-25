@@ -8,8 +8,12 @@
 
 ## Estado actual
 
-Cobertura mínima — hay un `example.test.ts` y poco más. **La mayoría de validación es manual**.
-Esto es información, no juicio: no asumir que existe red de seguridad automática al refactorizar.
+Cubierta la lógica pura del dominio: `mesesACubrir` (snapshots), `planificarRecurrentes`
+(recurrentes: día 31, huérfanos, transferencias), `calcularSaldos` y `fetchAll`. Los hooks y
+la UI **se validan a mano**: no asumir red de seguridad automática al refactorizarlos.
+
+CI (`.github/workflows/ci.yml`) corre typecheck, lint, tests y build en cada push a `main`.
+`npm run build` también corre `tsc -b`, así que un error de tipos bloquea el deploy.
 
 ## Cuándo escribir tests
 

@@ -27,6 +27,20 @@ describe la causa raíz y dónde mirar.
 
 ---
 
+## Tope de 1000 filas de PostgREST
+
+**Síntoma**: saldos, snapshots o exports que no cuadran, sin ningún error visible.
+
+**Causa**: la API de Supabase corta cada respuesta en `max_rows` (1000 por defecto) y no
+avisa. Una query que trae "todos los movimientos" para sumarlos en cliente devuelve un
+subconjunto en cuanto hay más filas — y si ese resultado se guarda (snapshots, ajuste de
+saldo) el error queda persistido.
+
+**Regla**: cualquier query sin filtro que la acote (`mes_referencia`, un id concreto…) va
+con `fetchAll()` de `src/lib/fetch-all.ts` y un `.order()` total (acabando en `id`).
+
+---
+
 ## Input numérico que no borra el último dígito
 
 **Síntoma**: en formularios con cantidad, no se puede dejar el campo vacío al borrar.

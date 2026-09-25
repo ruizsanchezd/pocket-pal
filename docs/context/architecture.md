@@ -34,8 +34,14 @@ src/
 |---|---|
 | User/session/profile | `useAuth()` (Context) |
 | Datos servidor cacheables y compartidos (cuentas, categorías) | React Query via `useCuentas()` / `useCategorias()` |
+
 | Datos servidor de una página (movimientos del mes) | `useState` local en hook de página + `useEffect` |
 | Estado UI local (modales, filtros) | `useState` colocado junto a los datos que afecta |
+
+React Query corre **sin `staleTime`** (se vuelve a pedir al montar): las páginas de
+configuración guardan con su propio estado y no invalidan `['cuentas']`/`['categorias']`.
+Subir el `staleTime` sin añadir antes esas invalidaciones haría que una cuenta nueva no
+apareciera en los formularios.
 
 `useMovimientos` mezcla a propósito estado local + cache + UI: la página tiene una vista única
 acoplada a operaciones CRUD, y separar daría más fricción que claridad.
@@ -60,5 +66,7 @@ Console logs envueltos en `if (import.meta.env.DEV)`. No dejar logs sin guardar 
 ## Build & alias
 
 - `@/*` → `src/*` (tsconfig + vite.config).
+- Rutas con `React.lazy` en `App.tsx` (las tres pestañas principales se precargan en idle);
+  React y Supabase van en chunks de vendor propios para que sobrevivan en caché a los deploys.
 - Dev server en puerto **8080** (no 5173).
 - `npm run build:dev` existe para builds en modo development.

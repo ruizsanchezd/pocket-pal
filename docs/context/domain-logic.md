@@ -21,11 +21,12 @@ No se almacena. Se calcula como:
 saldo_actual = saldo_inicial + Σ(movimientos.cantidad WHERE cuenta_id = X)
 ```
 
-Implementación: `src/hooks/useAccountBalances.ts`. Hace **una sola query** trayendo
-`cantidad + cuenta_id` para todas las cuentas y agrupa en cliente. Es intencionadamente
-una agregación cliente porque evita N queries y la cantidad de movimientos por usuario es modesta.
+Implementación: `calcularSaldos()` en `src/lib/saldos.ts` es la **única** regla de saldo
+(también `gastos_mes` de monederos e `invertido`/`rendimiento` de inversión). La usan el
+Dashboard y `useAccountBalances`. Los movimientos se traen con `fetchMovimientosParaSaldos()`:
+una query paginada para todas las cuentas, agregada en cliente.
 
-**Si esto crece**: mover a una vista materializada o RPC.
+**Si esto crece** (varios miles de movimientos): mover la suma a una RPC en Postgres.
 
 ## Tipos de cuenta
 
@@ -39,7 +40,8 @@ Ver `CuentaConSaldo` en `types/database.ts`.
 
 ## Recurrentes: generación lazy
 
-Disparada por `useMovimientos` cuando se navega al mes **actual**. Pasos:
+Disparada por `useMovimientos` cuando se navega al mes **actual**. La decisión de qué generar
+es pura y está testeada: `planificarRecurrentes()` en `src/lib/recurrentes.ts`. Pasos:
 
 1. Lee `gastos_recurrentes` activos.
 2. Re-consulta movimientos del mes para obtener estado fresco (no fía del state, evita races).

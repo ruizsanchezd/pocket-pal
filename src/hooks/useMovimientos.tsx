@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { format, parse, addMonths, subMonths, getDaysInMonth } from 'date-fns';
+import { format, parse, addMonths, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useWebHaptics } from 'web-haptics/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,20 +10,7 @@ import { ToastAction } from '@/components/ui/toast';
 import { useCuentas, useCategorias } from '@/hooks/useStaticData';
 import { MovimientoConRelaciones, Movimiento, Categoria } from '@/types/database';
 import { MovimientoFormData } from '@/lib/validations';
-
-interface MovimientoInsert {
-  user_id: string;
-  fecha: string;
-  concepto: string;
-  cantidad: number;
-  cuenta_id: string;
-  categoria_id: string;
-  subcategoria_id?: string | null;
-  notas?: string | null;
-  es_recurrente: boolean;
-  recurrente_template_id: string;
-  mes_referencia: string;
-}
+import { planificarRecurrentes } from '@/lib/recurrentes';
 
 export function useMovimientos() {
   const { user, profile } = useAuth();
@@ -138,11 +125,6 @@ export function useMovimientos() {
       if (currentMonth === format(new Date(), 'yyyy-MM') && !isAutoGeneratingRef.current) {
         isAutoGeneratingRef.current = true;
         try {
-          const today = new Date();
-          const currentDay = today.getDate();
-          const date = parse(currentMonth, 'yyyy-MM', new Date());
-          const daysInMonth = getDaysInMonth(date);
-
           const { data: templates } = await supabase
             .from('gastos_recurrentes')
             .select('*')
@@ -150,11 +132,8 @@ export function useMovimientos() {
             .eq('activo', true);
 
           if (templates?.length) {
-            // Re-query DB for existing recurrentes to get the freshest state.
-            // We fetch both non-null template IDs and orphaned es_recurrente rows
-            // (template_id=NULL, caused by ON DELETE SET NULL when a template is
-            // deleted and recreated). The orphan check uses concepto+cuenta_id so
-            // we don't generate a duplicate even when the template ID changed.
+            // Re-query DB for existing recurrentes to get the freshest state, including
+            // orphaned es_recurrente rows (template_id=NULL) — see planificarRecurrentes.
             const { data: existingRows } = await supabase
               .from('movimientos')
               .select('recurrente_template_id, concepto, cuenta_id')
@@ -162,64 +141,15 @@ export function useMovimientos() {
               .eq('mes_referencia', currentMonth)
               .or('recurrente_template_id.not.is.null,es_recurrente.eq.true');
 
-            const existingTemplateIds = new Set(
-              existingRows?.map(m => m.recurrente_template_id).filter(id => !!id) ?? []
-            );
-            // Fallback set: concepto+cuenta_id combos for orphaned rows (template_id=null)
-            const existingOrphans = new Set(
-              existingRows
-                ?.filter(m => !m.recurrente_template_id)
-                .map(m => `${m.concepto}::${m.cuenta_id}`) ?? []
+            const movimientosToCreate = planificarRecurrentes(
+              templates,
+              existingRows ?? [],
+              currentMonth,
+              new Date(),
+              user.id
             );
 
-            const pending = templates.filter(t => {
-              if (existingTemplateIds.has(t.id)) return false;
-              if (existingOrphans.has(`${t.concepto}::${t.cuenta_id}`)) return false;
-              const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
-              return actualDay <= currentDay;
-            });
-
-            if (pending.length > 0) {
-              const movimientosToCreate: MovimientoInsert[] = [];
-
-              pending.forEach(t => {
-                const actualDay = Math.min(t.dia_del_mes ?? 1, daysInMonth);
-                const fechaStr = format(
-                  new Date(date.getFullYear(), date.getMonth(), actualDay),
-                  'yyyy-MM-dd'
-                );
-
-                movimientosToCreate.push({
-                  user_id: user.id,
-                  fecha: fechaStr,
-                  concepto: t.concepto,
-                  cantidad: t.is_transfer ? -Math.abs(t.cantidad) : t.cantidad,
-                  cuenta_id: t.cuenta_id,
-                  categoria_id: t.categoria_id,
-                  subcategoria_id: t.subcategoria_id,
-                  notas: t.notas,
-                  es_recurrente: true,
-                  recurrente_template_id: t.id,
-                  mes_referencia: currentMonth
-                });
-
-                if (t.is_transfer && t.destination_account_id) {
-                  movimientosToCreate.push({
-                    user_id: user.id,
-                    fecha: fechaStr,
-                    concepto: t.concepto,
-                    cantidad: Math.abs(t.cantidad),
-                    cuenta_id: t.destination_account_id,
-                    categoria_id: t.categoria_id,
-                    subcategoria_id: t.subcategoria_id,
-                    notas: t.notas ? `${t.notas} (transferencia)` : 'Transferencia entre cuentas',
-                    es_recurrente: true,
-                    recurrente_template_id: t.id,
-                    mes_referencia: currentMonth
-                  });
-                }
-              });
-
+            if (movimientosToCreate.length > 0) {
               const { error } = await supabase
                 .from('movimientos')
                 .upsert(movimientosToCreate, {
