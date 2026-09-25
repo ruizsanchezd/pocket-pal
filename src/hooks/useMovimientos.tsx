@@ -324,6 +324,7 @@ export function useMovimientos() {
       cuenta_id: data.cuenta_id,
       categoria_id: data.categoria_id,
       subcategoria_id: data.subcategoria_id || null,
+      notas: data.notas || null,
       mes_referencia: format(data.fecha, 'yyyy-MM')
     };
 

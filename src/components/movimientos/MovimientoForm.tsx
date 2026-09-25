@@ -80,7 +80,8 @@ export function MovimientoForm({
       cantidad: initialData?.cantidad ? Number(initialData.cantidad) : undefined,
       cuenta_id: initialData?.cuenta_id || defaultCuentaId || cuentas[0]?.id || '',
       categoria_id: initialData?.categoria_id || '',
-      subcategoria_id: initialData?.subcategoria_id || undefined
+      subcategoria_id: initialData?.subcategoria_id || undefined,
+      notas: initialData?.notas ?? ''
     }
   });
 
@@ -415,6 +416,20 @@ export function MovimientoForm({
             )}
           />
         )}
+
+        <FormField
+          control={form.control}
+          name="notas"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Notas</FormLabel>
+              <FormControl>
+                <Input placeholder="Opcional" {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>

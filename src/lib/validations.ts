@@ -18,9 +18,13 @@ export const loginSchema = z.object({
   password: passwordSchema
 });
 
+// Más estricto solo en el alta: el login sigue aceptando contraseñas antiguas de 6-7.
 export const signUpSchema = z.object({
   email: emailSchema,
-  password: passwordSchema,
+  password: z
+    .string()
+    .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .max(72, 'La contraseña no puede exceder 72 caracteres'),
   confirmPassword: z.string()
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Las contraseñas no coinciden',
@@ -49,7 +53,12 @@ export const movimientoSchema = z.object({
   categoria_id: z
     .string()
     .min(1, 'Selecciona una categoría'),
-  subcategoria_id: z.string().optional()
+  subcategoria_id: z.string().optional(),
+  notas: z
+    .string()
+    .trim()
+    .max(500, 'Las notas no pueden exceder 500 caracteres')
+    .optional()
 });
 
 // Cuenta validations
