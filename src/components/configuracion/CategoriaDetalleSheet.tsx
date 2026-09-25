@@ -33,7 +33,8 @@ import {
 import { CategoriaForm } from '@/components/configuracion/CategoriaForm';
 import { Loader2, Plus, Trash2, MoreHorizontal } from 'lucide-react';
 
-import { Categoria, CategoriaConHijos, CategoriaFormData } from '@/types/database';
+import { Categoria, CategoriaConHijos } from '@/types/database';
+import type { CategoriaFormData } from '@/lib/validations';
 
 const EDIT_FORM_ID = 'categoria-edit-form';
 

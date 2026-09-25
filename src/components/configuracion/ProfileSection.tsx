@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Camera, Loader2 } from 'lucide-react';
 import { Profile } from '@/types/database';
 
+/** Forma del JSON que devuelve la RPC `update_own_profile`. */
+type UpdateOwnProfileResult = { profile?: Profile; error?: string };
+
 export function ProfileSection() {
   const { user, profile, setProfileData } = useAuth();
   const { toast } = useToast();
@@ -43,10 +46,11 @@ export function ProfileSection() {
     if (!user) return;
 
     setSaving(true);
-    const { data, error } = await supabase.rpc('update_own_profile', {
+    const { data: rpcData, error } = await supabase.rpc('update_own_profile', {
       _display_name: displayName.trim() || null,
       _set_display_name: true,
     });
+    const data = rpcData as UpdateOwnProfileResult | null;
 
     if (error) {
       toast({
@@ -126,10 +130,11 @@ export function ProfileSection() {
 
       // Update profile with avatar URL (add timestamp to bust cache)
       const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-      const { data: rpcData, error: updateError } = await supabase.rpc('update_own_profile', {
+      const { data: rawRpcData, error: updateError } = await supabase.rpc('update_own_profile', {
         _avatar_url: avatarUrl,
         _set_avatar_url: true,
       });
+      const rpcData = rawRpcData as UpdateOwnProfileResult | null;
 
       if (updateError) {
         toast({

@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_balance_history: {
+        Row: {
+          changed_at: string | null
+          cuenta_id: string
+          id: string
+          new_balance: number
+          previous_balance: number
+          snapshot_id: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          cuenta_id: string
+          id?: string
+          new_balance: number
+          previous_balance: number
+          snapshot_id?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          cuenta_id?: string
+          id?: string
+          new_balance?: number
+          previous_balance?: number
+          snapshot_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_balance_history_cuenta_id_fkey"
+            columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_balance_history_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "snapshots_patrimonio"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categorias: {
         Row: {
           color: string | null
@@ -61,6 +106,7 @@ export type Database = {
       cuentas: {
         Row: {
           activa: boolean | null
+          capital_inicial_invertido: number | null
           color: string | null
           created_at: string | null
           divisa: string | null
@@ -74,6 +120,7 @@ export type Database = {
         }
         Insert: {
           activa?: boolean | null
+          capital_inicial_invertido?: number | null
           color?: string | null
           created_at?: string | null
           divisa?: string | null
@@ -87,6 +134,7 @@ export type Database = {
         }
         Update: {
           activa?: boolean | null
+          capital_inicial_invertido?: number | null
           color?: string | null
           created_at?: string | null
           divisa?: string | null
@@ -147,8 +195,10 @@ export type Database = {
           concepto: string
           created_at: string | null
           cuenta_id: string
+          destination_account_id: string | null
           dia_del_mes: number | null
           id: string
+          is_transfer: boolean | null
           notas: string | null
           subcategoria_id: string | null
           user_id: string
@@ -161,8 +211,10 @@ export type Database = {
           concepto: string
           created_at?: string | null
           cuenta_id: string
+          destination_account_id?: string | null
           dia_del_mes?: number | null
           id?: string
+          is_transfer?: boolean | null
           notas?: string | null
           subcategoria_id?: string | null
           user_id: string
@@ -175,8 +227,10 @@ export type Database = {
           concepto?: string
           created_at?: string | null
           cuenta_id?: string
+          destination_account_id?: string | null
           dia_del_mes?: number | null
           id?: string
+          is_transfer?: boolean | null
           notas?: string | null
           subcategoria_id?: string | null
           user_id?: string
@@ -192,6 +246,13 @@ export type Database = {
           {
             foreignKeyName: "gastos_recurrentes_cuenta_id_fkey"
             columns: ["cuenta_id"]
+            isOneToOne: false
+            referencedRelation: "cuentas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gastos_recurrentes_destination_account_id_fkey"
+            columns: ["destination_account_id"]
             isOneToOne: false
             referencedRelation: "cuentas"
             referencedColumns: ["id"]
@@ -411,6 +472,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_own_profile: {
+        Args: {
+          _avatar_url?: string
+          _display_name?: string
+          _set_avatar_url?: boolean
+          _set_display_name?: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {

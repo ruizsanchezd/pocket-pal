@@ -54,14 +54,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Track new user signup
-        if (event === 'SIGNED_UP') {
-          setIsNewUser(true);
-          sessionStorage.setItem(NEW_USER_KEY, 'true');
-        }
-
-        // For OAuth, check if user was created very recently (within last 10 seconds)
-        // This handles Google sign-in for brand new users
+        // Supabase no emite un evento de alta: tanto el signup por email como el primer
+        // login con Google llegan como SIGNED_IN, así que se detecta por la antigüedad del usuario.
         if (event === 'SIGNED_IN' && session?.user) {
           const createdAt = new Date(session.user.created_at).getTime();
           const now = Date.now();

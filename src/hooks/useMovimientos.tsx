@@ -298,25 +298,29 @@ export function useMovimientos() {
       });
     } else {
       haptic.trigger('success');
-      setRawMovimientos(rawMovimientos.filter(m => m.id !== id));
+      setRawMovimientos(prev => prev.filter(m => m.id !== id));
       toast({ title: 'Movimiento eliminado' });
     }
     setDeleteConfirm(null);
   };
 
   const handleUndoDelete = async (movimiento: MovimientoConRelaciones) => {
+    // Se reinserta la fila tal cual era: mismo id, mismo created_at (el orden intradía de la
+    // lista depende de él) y mismo recurrente_template_id (sin él quedaría como huérfano).
     const { error } = await supabase.from('movimientos').insert({
+      id: movimiento.id,
       user_id: movimiento.user_id,
       fecha: movimiento.fecha,
       concepto: movimiento.concepto,
       cantidad: movimiento.cantidad,
-      tipo: movimiento.tipo,
       cuenta_id: movimiento.cuenta_id,
       categoria_id: movimiento.categoria_id,
       subcategoria_id: movimiento.subcategoria_id,
       mes_referencia: movimiento.mes_referencia,
       notas: movimiento.notas,
       es_recurrente: movimiento.es_recurrente,
+      recurrente_template_id: movimiento.recurrente_template_id,
+      created_at: movimiento.created_at,
     });
 
     if (error) {
