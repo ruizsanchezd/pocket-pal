@@ -30,3 +30,6 @@ supabase/.temp/
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Worktrees de Claude Code
+.claude/worktrees/
