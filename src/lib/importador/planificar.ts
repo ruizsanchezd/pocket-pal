@@ -1,6 +1,7 @@
 import { addDays, addMonths, differenceInCalendarDays, format, parseISO, startOfMonth } from 'date-fns';
 import type { Json } from '@/integrations/supabase/types';
 import type { Categoria, LineaExtracto } from '@/types/database';
+import { PALABRAS_VACIAS, PISTAS } from './pistas';
 
 /**
  * Qué hacer con cada línea de un extracto bancario. Lógica pura: la pantalla
@@ -187,6 +188,7 @@ interface Historial {
   porClave: Map<string, Ejemplo[]>;
   porMasDatos: Map<string, Ejemplo[]>;
   porPrimeraPalabra: Map<string, Ejemplo[]>;
+  porPalabra: Map<string, Ejemplo[]>;
 }
 
 function primeraPalabra(clave: string): string | null {
@@ -201,7 +203,7 @@ function claveMasDatos(linea: LineaExtracto): string | null {
 
 function construirHistorial(conocidos: MovimientoConocido[], categorias: Categoria[]): Historial {
   const ids = new Set(categorias.map((c) => c.id));
-  const h: Historial = { porClave: new Map(), porMasDatos: new Map(), porPrimeraPalabra: new Map() };
+  const h: Historial = { porClave: new Map(), porMasDatos: new Map(), porPrimeraPalabra: new Map(), porPalabra: new Map() };
   const meter = (mapa: Map<string, Ejemplo[]>, clave: string | null, e: Ejemplo) => {
     if (!clave) return;
     mapa.set(clave, [...(mapa.get(clave) ?? []), e]);
@@ -218,6 +220,7 @@ function construirHistorial(conocidos: MovimientoConocido[], categorias: Categor
       meter(h.porClave, clave, e);
       meter(h.porMasDatos, claveMasDatos(linea), e);
       meter(h.porPrimeraPalabra, primeraPalabra(clave), e);
+      for (const p of new Set(clave.split(' '))) meter(h.porPalabra, p, e);
     }
   }
   return h;
@@ -266,12 +269,15 @@ function proponer(linea: LineaExtracto, h: Historial, entrada: EntradaPlan, viaj
     ejemplos = (porMas && h.porMasDatos.get(porMas)) || (palabra && h.porPrimeraPalabra.get(palabra)) || [];
     parecido = ejemplos[0]?.linea.concepto ?? null;
   }
-  if (!ejemplos.length) return vacia;
+  if (!ejemplos.length) return porPalabras(linea.concepto, h, entrada, viajesId, vacia);
 
   // Un viaje es de una vez: que "El Soportal" fuera al viaje a León no dice nada de la próxima.
   const normales = ejemplos.filter((e) => e.mov.categoria_id !== viajesId);
   if (!normales.length) {
-    return { ...vacia, motivo: `Solo lo has visto en un viaje (${nombreCategoria(ejemplos[0], entrada.categorias)}).` };
+    return porPalabras(linea.concepto, h, entrada, viajesId, {
+      ...vacia,
+      motivo: `Solo lo has visto en un viaje (${nombreCategoria(ejemplos[0], entrada.categorias)}).`,
+    });
   }
 
   // Mismo comercio y mismo importe manda: APPLE.COM/BILL 2,99 es iCloud y 19,99 Notability.
@@ -344,6 +350,78 @@ function conRetencion(p: Propuesta, retencion: LineaExtracto): Propuesta {
     ...p,
     motivo: `Cargo final de la retención de «${retencion.concepto}» (${euros(retencion.importe)}). ${p.motivo}`,
   };
+}
+
+/**
+ * Para un comercio sin historial propio: primero una palabra que el usuario ya usa siempre
+ * igual en otros comercios ("TAXI" en TAXI LIC y TAXI LEON → Taxi), y si no, una pista de la
+ * lista fija (`pistas.ts`). Siempre amarillo: es una suposición.
+ */
+function porPalabras(texto: string, h: Historial, entrada: EntradaPlan, viajesId: string | null, sinPista: Propuesta): Propuesta {
+  const clave = claveComercio(texto);
+  // "Para sushi" + destinatario: el concepto lo escribió el usuario en su Bizum o
+  // transferencia, no es un comercio (eran regalos de boda, no un japonés).
+  if (clave.startsWith('PARA ')) return sinPista;
+  const palabras = clave.split(' ');
+
+  for (const p of palabras) {
+    if (p.length < 3 || PALABRAS_VACIAS.has(p)) continue;
+    const ejemplos = (h.porPalabra.get(p) ?? []).filter(
+      (e) => e.mov.categoria_id !== viajesId && claveComercio(e.linea.concepto) !== clave
+    );
+    const comercios = [...new Set(ejemplos.map((e) => claveComercio(e.linea.concepto)))];
+    if (comercios.length < 2 || new Set(ejemplos.map(categoriaDe)).size !== 1) continue;
+    const ref = ejemplos.reduce((a, b) => (a.mov.fecha >= b.mov.fecha ? a : b));
+    return {
+      ...sinPista,
+      categoria_id: ref.mov.categoria_id,
+      subcategoria_id: ref.mov.subcategoria_id,
+      nivel: 'amarillo',
+      motivo: `Otros comercios con «${p}» (${comercios.slice(0, 2).join(', ')}) fueron ${nombreCategoria(ref, entrada.categorias)}.`,
+    };
+  }
+
+  const buscar = (nombre: string, padre: string | null) =>
+    entrada.categorias.find((c) => c.parent_id === padre && normalizar(c.nombre) === normalizar(nombre));
+  // Para las pistas, las cifras separan palabras en vez de descartarlas: "FISIO4YOU" → FISIO.
+  const palabrasPista = normalizar(texto).split(/[^A-Z]+/).filter(Boolean);
+  for (const pista of PISTAS) {
+    const palabra = pista.palabras.find((patron) => encajaPatron(palabrasPista, patron));
+    if (!palabra) continue;
+    const padre = buscar(pista.categoria, null);
+    if (!padre) continue;
+    const sub = pista.subcategoria ? buscar(pista.subcategoria, padre.id) : undefined;
+    const nombre = sub ? `${padre.nombre} › ${sub.nombre}` : padre.nombre;
+    const texto = palabra.replace('*', '');
+    return {
+      ...sinPista,
+      categoria_id: padre.id,
+      subcategoria_id: sub?.id ?? null,
+      nivel: 'amarillo',
+      motivo: padre.id === viajesId
+        ? `«${texto}» suena a viaje: usa «Estuve de viaje» para elegir cuál.`
+        : `Pista: «${texto}» suele ser ${nombre}.`,
+    };
+  }
+
+  return sinPista;
+}
+
+/** `BAR` palabra entera, `RESTAUR*` prefijo, `UBER EATS` palabras seguidas (ver `pistas.ts`). */
+export function encajaPatron(palabras: string[], patron: string): boolean {
+  const partes = patron.split(' ');
+  for (let i = 0; i + partes.length <= palabras.length; i++) {
+    if (partes.every((parte, j) => encajaPalabra(palabras[i + j], parte, i + j === palabras.length - 1))) return true;
+  }
+  return false;
+}
+
+function encajaPalabra(palabra: string, parte: string, esUltima: boolean): boolean {
+  const prefijo = parte.endsWith('*');
+  const raiz = prefijo ? parte.slice(0, -1) : parte;
+  if (prefijo ? palabra.startsWith(raiz) : palabra === raiz) return true;
+  // El banco corta el concepto: la última palabra puede venir a medias ("RESTAURACI").
+  return esUltima && palabra.length >= 4 && raiz.startsWith(palabra);
 }
 
 const masReciente = (g: Ejemplo[]) => g.reduce((m, e) => (e.mov.fecha > m ? e.mov.fecha : m), '');

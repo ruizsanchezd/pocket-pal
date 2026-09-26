@@ -123,7 +123,13 @@ Cada línea del extracto acaba en uno de cuatro tipos, por este orden:
      cobra cosas distintas (APPLE.COM/BILL), manda el importe.
    - **amarillo**: visto 1 vez, visto con varias categorías, parecido (misma primera palabra o
      mismo `mas_datos`), o concepto genérico ("COMPRA CON TARJETA").
-   - **rojo**: nunca visto, o Bizum sin pista.
+   - **rojo**: nunca visto y sin pista, o Bizum sin pista.
+   - **Pistas por palabra** para lo nunca visto (siempre amarillo): primero una palabra que el
+     usuario ya usa en ≥2 comercios distintos siempre con la misma categoría (se aprende sola;
+     `PALABRAS_VACIAS` excluye "LAS", "MADRID"…); si no, la lista fija de `lib/importador/pistas.ts`
+     ("GRILL" → Restaurante, "E S" → Gasolina…), que apunta a categorías por nombre y se ignora
+     si el usuario no las tiene. No se aplican a "Para …" (concepto escrito por el usuario en un
+     Bizum o transferencia). Para añadir pistas, editar esa lista: el orden importa.
    - Los movimientos de **Viajes** no enseñan: un viaje es de una vez. Para eso está el botón
      "Estuve de viaje" (`filasDelViaje()`), que pasa un rango de fechas a una subcategoría de
      Viajes salvo recurrentes y Vicio (el tabaco nunca va al viaje).

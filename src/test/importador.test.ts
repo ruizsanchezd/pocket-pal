@@ -21,6 +21,9 @@ const CATEGORIAS = [
   cat('servicios', 'Servicios'), cat('icloud', 'iCloud', 'servicios'), cat('notability', 'Notability', 'servicios'),
   cat('gimnasio', 'Gimnasio', 'servicios'),
   cat('ocio', 'Ocio'), cat('restaurante', 'Restaurante', 'ocio'), cat('vicio', 'Vicio', 'ocio'),
+  cat('tomar', 'Tomar algo', 'ocio'),
+  cat('salud', 'Salud'), cat('fisio', 'Fisio', 'salud'),
+  cat('transporte', 'Transporte'), cat('taxi', 'VTC / Taxi', 'transporte'),
   cat('coche', 'Coche'), cat('gasolina', 'Gasolina', 'coche'),
   cat('casa', 'Casa'), cat('salario', 'Salario'),
   cat('viajes', 'Viajes'), cat('leon', 'León Agosto', 'viajes'),
@@ -127,9 +130,9 @@ describe('planificarImportacion', () => {
 
   it('amarillo si solo lo ha visto una vez, y rojo si nunca', () => {
     const conocidos = [importado('2026-08-04', 'LIDL MAD PASILLO', -30, 'super', 'lidl', 'Compra Lidl')];
-    const [una, nunca] = plan([linea('2026-09-20', 'LIDL MAD PASILLO', -12), linea('2026-09-20', 'SPORTS GRILL', -60)], conocidos);
+    const [una, nunca] = plan([linea('2026-09-20', 'LIDL MAD PASILLO', -12), linea('2026-09-20', 'CARDESA', -60)], conocidos);
     expect(nueva(una).propuesta).toMatchObject({ nivel: 'amarillo', subcategoria_id: 'lidl', concepto: 'Lidl Mad Pasillo' });
-    expect(nueva(nunca).propuesta).toMatchObject({ nivel: 'rojo', categoria_id: null, concepto: 'Sports Grill' });
+    expect(nueva(nunca).propuesta).toMatchObject({ nivel: 'rojo', categoria_id: null, concepto: 'Cardesa' });
   });
 
   it('distingue por importe cuando el mismo comercio cobra cosas distintas', () => {
@@ -197,10 +200,58 @@ describe('planificarImportacion', () => {
     const alquiler = mov('2026-09-24', 'Alquiler', -1000, 'casa', null, null, { recurrente_template_id: 'tpl-alquiler', cuenta_id: 'otra' });
     const filas = plan([
       linea('2026-09-24', 'BIZUM RECIBIDO', 21.2, 'BIZUM'),
-      linea('2026-09-24', 'SPORTS GRILL', -60.2),
+      linea('2026-09-24', 'CARDESA', -60.2),
     ], [alquiler]);
     expect(nueva(filas[0]).propuesta).toMatchObject({ sigueA: 1, nivel: 'rojo' });
-    expect(nueva(filas[0]).propuesta.motivo).toMatch(/Sports Grill/);
+    expect(nueva(filas[0]).propuesta.motivo).toMatch(/Cardesa/);
+  });
+});
+
+describe('pistas para comercios nunca vistos', () => {
+  const propuesta = (concepto: string, conocidos: MovimientoConocido[] = [], mas: string | null = null) =>
+    nueva(plan([linea('2026-09-24', concepto, -20, mas)], conocidos)[0]).propuesta;
+
+  it('usa la lista de pistas, en amarillo', () => {
+    expect(propuesta('SPORTS GRILL PENA')).toMatchObject({ nivel: 'amarillo', subcategoria_id: 'restaurante' });
+    expect(propuesta('SPORTS GRILL PENA').motivo).toMatch(/«GRILL»/);
+  });
+
+  it('acepta la última palabra cortada por el banco y palabras pegadas a cifras', () => {
+    expect(propuesta('YALEVA RESTAURACI').subcategoria_id).toBe('restaurante');
+    expect(propuesta('FISIO4YOU PIRAMID').subcategoria_id).toBe('fisio');
+  });
+
+  it('las palabras cortas tienen que ir enteras y gana la pista más concreta', () => {
+    expect(propuesta('ESTANCO BARCELO').subcategoria_id).toBe('vicio');
+    expect(propuesta('BAR RESTAURANTE P').subcategoria_id).toBe('restaurante');
+    expect(propuesta('OLD BAR LUJAM').subcategoria_id).toBe('tomar');
+  });
+
+  it('no usa pistas con lo que escribe el usuario en un Bizum o transferencia', () => {
+    expect(propuesta('Para sushi', [], 'Nombre Apellido').nivel).toBe('rojo');
+  });
+
+  it('antes que la lista, una palabra que el usuario ya usa siempre igual en otros comercios', () => {
+    const conocidos = [
+      importado('2026-07-01', 'TAXI LIC', -12, 'transporte', 'taxi'),
+      importado('2026-08-01', 'LM TAXI ADEJE', -15, 'transporte', 'taxi'),
+    ];
+    const p = propuesta('RADIO TAXI SUR', conocidos);
+    expect(p).toMatchObject({ nivel: 'amarillo', subcategoria_id: 'taxi' });
+    expect(p.motivo).toMatch(/Otros comercios con «TAXI»/);
+  });
+
+  it('no aprende palabras vacías como "LAS"', () => {
+    const conocidos = [
+      importado('2026-07-01', 'E.S. LAS ARENAS', -30, 'coche', 'gasolina'),
+      importado('2026-08-01', 'LAS ACACIAS', -25, 'coche', 'gasolina'),
+    ];
+    expect(propuesta('LAS ROZAS VILLAGE', conocidos).nivel).toBe('rojo');
+  });
+
+  it('ignora la pista si el usuario no tiene esa categoría', () => {
+    const f = nueva(plan([linea('2026-09-24', 'FARMACIA CENTRAL', -8)], [], { categorias: CATEGORIAS.filter((c) => c.id !== 'salud' && c.parent_id !== 'salud') })[0]);
+    expect(f.propuesta.nivel).toBe('rojo');
   });
 });
 
