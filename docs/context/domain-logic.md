@@ -97,9 +97,26 @@ auto-generación de recurrentes si es el mes actual.
 
 ## Importador de extractos
 
-Página `/movimientos/importar` (`pages/ImportarExtracto.tsx`). De momento solo lee el CSV de
-CaixaBank (`lib/importador/extracto-caixabank.ts`). La decisión es pura y está testeada:
-`planificarImportacion()` en `lib/importador/planificar.ts`.
+Página `/movimientos/importar` (`pages/ImportarExtracto.tsx`). Lee el extracto de CaixaBank en
+tres formas (`lib/importador/leer-extracto.ts` elige por extensión; los lectores, puros y
+testeados, en `lib/importador/extracto-caixabank.ts`):
+
+- **CSV** — el Excel del banco exportado a mano.
+- **Excel (.xls)** tal cual lo descarga el banco, con SheetJS (`xlsx`, instalado desde
+  cdn.sheetjs.com: la versión de npm está abandonada). Fechas como número de serie de Excel.
+- **PDF** — la página de movimientos de CaixaBankNow impresa desde el navegador, con pdf.js
+  (`pdfjs-dist`, build `legacy`). Las columnas se reconocen por la posición de la cabecera
+  en cada página; cada texto viene duplicado y los "Más datos" largos parten en dos renglones.
+  No trae fecha valor (`fecha_valor: null`). Conserva signos que el CSV quita
+  ("NOMINA (TRF)" / "NOMINA TRF", "MC DONALD'S"): por eso `huellaLinea()` y `claveComercio()`
+  comparan el concepto normalizado. Si CaixaBank cambia el diseño de esa página, es lo primero
+  que se rompe.
+
+Las dos librerías pesan ~500 kB cada una y se cargan solo al elegir un archivo de ese tipo.
+Todos los formatos comprueban que cada saldo sea el anterior más su importe: si no cuadra, se
+rechaza el archivo en vez de proponer algo mal leído.
+
+La decisión es pura y está testeada: `planificarImportacion()` en `lib/importador/planificar.ts`.
 
 **Aprende de `movimientos.lineas_extracto`** (ver [database.md](./database.md)): cada movimiento
 que vino del banco dice cómo lo llamó el banco y en qué categoría quedó. No hay tabla de reglas:

@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCategorias, useCuentas } from '@/hooks/useStaticData';
 import { crearCategoria, deshacerImportacion, guardarImportacion, useDatosImportador, type EstadoNueva } from '@/hooks/useImportador';
 import { ToastAction } from '@/components/ui/toast';
-import { parsearExtractoCaixaBank } from '@/lib/importador/extracto-caixabank';
+import { FORMATOS_EXTRACTO, leerExtracto } from '@/lib/importador/leer-extracto';
 import { filasDelViaje, idCategoriaViajes, planificarImportacion, type FilaImportacion } from '@/lib/importador/planificar';
 import type { Categoria, LineaExtracto } from '@/types/database';
 
@@ -55,6 +55,7 @@ export default function ImportarExtracto() {
   const [soloPorRevisar, setSoloPorRevisar] = useState(false);
   const [viajeOpen, setViajeOpen] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [leyendo, setLeyendo] = useState(false);
 
   // Por defecto, la cuenta de la que ya se han importado extractos.
   const cuentaPorDefecto = useMemo(() => {
@@ -87,13 +88,15 @@ export default function ImportarExtracto() {
 
   const handleArchivo = async (file: File | undefined) => {
     if (!file || !cuentaId) return;
+    setLeyendo(true);
     try {
-      const leidas = parsearExtractoCaixaBank(await file.text());
+      const leidas = await leerExtracto(file);
       setLineas(leidas);
       planificar(leidas, cuentaId);
     } catch (e) {
       toast({ variant: 'destructive', title: 'No se pudo leer el extracto', description: (e as Error).message });
     } finally {
+      setLeyendo(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
@@ -265,7 +268,7 @@ export default function ImportarExtracto() {
                 Extracto del banco
               </CardTitle>
               <CardDescription>
-                De momento, el CSV de movimientos de CaixaBank. Lo que ya tengas apuntado no se duplica.
+                Los movimientos de CaixaBank en PDF (imprime la página de movimientos), Excel o CSV. Lo que ya tengas apuntado no se duplica.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -281,18 +284,18 @@ export default function ImportarExtracto() {
               <input
                 ref={inputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept={FORMATOS_EXTRACTO}
                 className="hidden"
                 onChange={(e) => handleArchivo(e.target.files?.[0])}
               />
               <Button
                 variant={filas ? 'outline' : 'default'}
                 className="w-full"
-                disabled={!cuentaId || cargandoDatos}
+                disabled={!cuentaId || cargandoDatos || leyendo}
                 onClick={() => inputRef.current?.click()}
               >
-                {cargandoDatos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-                {filas ? 'Elegir otro archivo' : 'Elegir archivo CSV'}
+                {cargandoDatos || leyendo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+                {filas ? 'Elegir otro archivo' : 'Elegir archivo'}
               </Button>
             </CardContent>
           </Card>

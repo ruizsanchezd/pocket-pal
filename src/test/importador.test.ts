@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { parsearExtractoCaixaBank } from '@/lib/importador/extracto-caixabank';
+import {
+  lineasDeHojaCaixaBank,
+  lineasDePdfCaixaBank,
+  parsearExtractoCaixaBank,
+  type TextoPdf,
+} from '@/lib/importador/extracto-caixabank';
 import {
   claveComercio,
   filasDelViaje,
+  huellaLinea,
   planificarImportacion,
   type EntradaPlan,
   type FilaImportacion,
@@ -78,6 +84,71 @@ describe('parsearExtractoCaixaBank', () => {
 
   it('rechaza un archivo que no es el CSV de CaixaBank', () => {
     expect(() => parsearExtractoCaixaBank('fecha,importe\n1,2')).toThrow(/CaixaBank/);
+  });
+
+  it('se niega si los saldos no cuadran', () => {
+    const roto = CSV.replace('4.499,32', '4.400,00');
+    expect(() => parsearExtractoCaixaBank(roto)).toThrow(/no cuadran en la línea del 25\/09\/2026/);
+  });
+});
+
+describe('lineasDeHojaCaixaBank', () => {
+  it('lee el Excel del banco: fechas como número de serie e importes como números', () => {
+    const lineas = lineasDeHojaCaixaBank([
+      ['Movimientos de la cuenta ES00 0000', null, null, null, null, null],
+      ['Importes expresados en euros', null, null, null, null, null],
+      ['Fecha', 'Fecha valor', 'Movimiento', 'Más datos', 'Importe', 'Saldo'],
+      [46293, 46293, 'BIZUM ENVIADO', '', -9.6, 4433.78],
+      [46263, 46265, 'NOMINA TRF', '00810144-MENDESALTAREN, S.L.', 2772.39, 4443.38],
+    ]);
+    expect(lineas).toEqual([
+      { fecha: '2026-09-28', fecha_valor: '2026-09-28', concepto: 'BIZUM ENVIADO', mas_datos: null, importe: -9.6, saldo: 4433.78 },
+      { fecha: '2026-08-29', fecha_valor: '2026-08-31', concepto: 'NOMINA TRF', mas_datos: '00810144-MENDESALTAREN, S.L.', importe: 2772.39, saldo: 4443.38 },
+    ]);
+  });
+});
+
+describe('lineasDePdfCaixaBank', () => {
+  // Posiciones copiadas del PDF que imprime CaixaBankNow desde el navegador.
+  const t = (pagina: number, x: number, y: number, ancho: number, texto: string): TextoPdf => ({ pagina, x, y, ancho, texto });
+  const cabecera = (pagina: number, y: number) => [
+    t(pagina, 19.7, y, 30.6, 'Fecha'), t(pagina, 81.2, y, 47.1, 'Concepto'), t(pagina, 222.6, y, 50.7, 'Más datos'),
+    t(pagina, 460, y, 37.3, 'Importe'), t(pagina, 547.6, y, 28.1, 'Saldo'),
+  ];
+  // Cada texto sale dos veces, como en el PDF real.
+  const doble = (xs: TextoPdf[]) => xs.flatMap((x) => [x, { ...x }]);
+  const TEXTOS = [
+    t(1, 513.4, 800.7, 62.4, '25 Sep 2026'), // fecha de impresión, encima de la cabecera
+    ...doble(cabecera(1, 655.2)),
+    ...doble([t(1, 19.7, 637.2, 43.6, '25 Sep 2026')]),
+    t(1, 81.2, 635.7, 90.4, 'BIZUM RECIBIDO'), t(1, 222.6, 635.7, 34.2, 'BIZUM'),
+    ...doble([t(1, 457.3, 635.7, 40, '+ 9,00 €'), t(1, 514.3, 635.7, 61.4, '+ 5.150,16 €')]),
+    ...doble([t(1, 19.7, 617.7, 39.4, '1 Sep 2026')]),
+    t(1, 81.2, 616.9, 123.4, 'RECIBO UNICO MYBOX'),
+    t(1, 222.6, 622.9, 177.4, 'CUOTA AGRUPADA MYBOX 01-09-'), t(1, 222.6, 610.9, 24.5, '2026'),
+    t(1, 453.9, 616.9, 43.4, '- 41,03 €'), ...doble([t(1, 514.3, 616.9, 61.4, '+ 5.141,16 €')]),
+    ...doble(cabecera(2, 814.2)),
+    ...doble([t(2, 19.7, 796.2, 43.2, '31 Ago 2026')]),
+    t(2, 81.2, 794.7, 75.1, 'NOMINA (TRF)'), t(2, 222.6, 794.7, 174.4, '00810144-MENDESALTAREN, S.L.'),
+    t(2, 436.7, 794.7, 60.6, '+ 2.772,39 €'), ...doble([t(2, 514.3, 794.7, 61.4, '+ 5.182,19 €')]),
+  ];
+
+  it('separa columnas por posición, junta renglones partidos y sigue en la página siguiente', () => {
+    expect(lineasDePdfCaixaBank(TEXTOS)).toEqual([
+      { fecha: '2026-09-25', fecha_valor: null, concepto: 'BIZUM RECIBIDO', mas_datos: 'BIZUM', importe: 9, saldo: 5150.16 },
+      { fecha: '2026-09-01', fecha_valor: null, concepto: 'RECIBO UNICO MYBOX', mas_datos: 'CUOTA AGRUPADA MYBOX 01-09-2026', importe: -41.03, saldo: 5141.16 },
+      { fecha: '2026-08-31', fecha_valor: null, concepto: 'NOMINA (TRF)', mas_datos: '00810144-MENDESALTAREN, S.L.', importe: 2772.39, saldo: 5182.19 },
+    ]);
+  });
+
+  it('rechaza un PDF que no es la página de movimientos', () => {
+    expect(() => lineasDePdfCaixaBank([t(1, 50, 700, 100, 'Factura')])).toThrow(/CaixaBank/);
+  });
+
+  it('la misma línea leída del PDF y del CSV tiene la misma huella', () => {
+    const [, , nomina] = lineasDePdfCaixaBank(TEXTOS);
+    expect(huellaLinea(nomina)).toBe(huellaLinea({ ...nomina, concepto: 'NOMINA TRF', fecha_valor: '2026-09-01' }));
+    expect(claveComercio("MC DONALD'S NUEVO")).toBe(claveComercio('MC DONALDS NUEVO'));
   });
 });
 

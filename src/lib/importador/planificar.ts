@@ -114,6 +114,8 @@ function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    // El CSV y el Excel del banco quitan los apóstrofos y el PDF no: "MC DONALD'S" = "MC DONALDS".
+    .replace(/['’]/g, '')
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, ' ')
     .trim();
@@ -128,9 +130,13 @@ function esBizum(linea: LineaExtracto): boolean {
   return esBizumGenerico(linea) || linea.mas_datos?.trim().toUpperCase() === 'BIZUM';
 }
 
-/** Identifica una línea del extracto: el saldo tras la operación la hace única. */
+/**
+ * Identifica una línea del extracto: el saldo tras la operación la hace única. El concepto se
+ * compara normalizado porque el PDF conserva signos y espacios que el CSV quita
+ * ("NOMINA (TRF)" / "NOMINA TRF"): la misma línea leída de uno y de otro es la misma.
+ */
 export function huellaLinea(l: LineaExtracto): string {
-  return [l.fecha, centimos(l.importe), l.saldo === null ? '' : centimos(l.saldo), l.concepto.trim()].join('|');
+  return [l.fecha, centimos(l.importe), l.saldo === null ? '' : centimos(l.saldo), normalizar(l.concepto)].join('|');
 }
 
 const centimos = (n: number) => Math.round(n * 100);
