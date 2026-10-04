@@ -1,9 +1,11 @@
+import { useEffect, useRef, useState } from 'react';
 import { Check, Link2, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
 import type { FilaImportacion, Nivel } from '@/lib/importador/planificar';
 import type { EstadoNueva } from '@/hooks/useImportador';
 import type { Categoria } from '@/types/database';
+import { ChipCategoria, SelectorCategoria } from './SelectorCategoria';
 
 const COLOR_NIVEL: Record<Nivel, string> = {
   verde: 'bg-green-500',
@@ -16,15 +18,37 @@ export function Semaforo({ nivel, tocado }: { nivel: Nivel; tocado: boolean }) {
   return <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', COLOR_NIVEL[nivel])} aria-label={nivel} />;
 }
 
-function Chip({ categoria }: { categoria: Categoria | undefined }) {
-  if (!categoria) return null;
+/** El concepto se corrige ahí mismo: se guarda al salir del campo o con Enter; Esc lo deja como estaba. */
+function ConceptoEditable({ valor, tachado, onCambiar }: { valor: string; tachado: boolean; onCambiar: (v: string) => void }) {
+  const [borrador, setBorrador] = useState(valor);
+  const cancelado = useRef(false);
+  useEffect(() => setBorrador(valor), [valor]);
+
   return (
-    <span
-      className="px-1.5 py-0.5 rounded text-xs font-medium"
-      style={{ backgroundColor: `${categoria.color}25`, color: categoria.color, filter: 'brightness(0.85)' }}
-    >
-      {categoria.nombre}
-    </span>
+    <input
+      value={borrador}
+      aria-label="Concepto"
+      onChange={(e) => setBorrador(e.target.value)}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={() => {
+        const nuevo = borrador.trim();
+        if (cancelado.current || !nuevo) setBorrador(valor);
+        else if (nuevo !== valor) onCambiar(nuevo);
+        cancelado.current = false;
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') {
+          cancelado.current = true;
+          e.currentTarget.blur();
+        }
+      }}
+      className={cn(
+        'w-full min-w-0 bg-transparent font-medium text-base md:text-sm truncate rounded px-1 -mx-1 py-0.5',
+        'border border-transparent hover:border-input focus:border-ring focus:outline-none focus:bg-background',
+        tachado && 'line-through text-muted-foreground'
+      )}
+    />
   );
 }
 
@@ -33,11 +57,12 @@ interface FilaRevisionProps {
   estado?: EstadoNueva;
   categorias: Categoria[];
   currency: string;
-  onClick?: () => void;
+  onCambiar?: (cambios: Partial<EstadoNueva>) => void;
+  onCrearCategoria?: (nombre: string, padre: Categoria | null) => Promise<string | null>;
 }
 
 /** Una línea del extracto en la revisión: lo que dice el banco y lo que se hará con ella. */
-export function FilaRevision({ fila, estado, categorias, currency, onClick }: FilaRevisionProps) {
+export function FilaRevision({ fila, estado, categorias, currency, onCambiar, onCrearCategoria }: FilaRevisionProps) {
   const importe = (
     <span className={cn(
       'font-semibold text-sm shrink-0 tabular-nums',
@@ -84,46 +109,57 @@ export function FilaRevision({ fila, estado, categorias, currency, onClick }: Fi
     );
   }
 
-  if (fila.tipo !== 'nueva' || !estado) return null;
+  if (fila.tipo !== 'nueva' || !estado || !onCambiar || !onCrearCategoria) return null;
   const categoria = categorias.find((c) => c.id === estado.categoria_id);
   const subcategoria = categorias.find((c) => c.id === estado.subcategoria_id);
   const porRevisar = !estado.tocado && estado.nivel !== 'verde';
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'w-full text-left flex items-start gap-3 px-4 py-3 active:bg-muted/40 hover:bg-muted/30 transition-colors',
-        !estado.incluir && 'opacity-50'
-      )}
-    >
-      <span className="mt-1.5 flex w-3.5 justify-center">
+    <div className={cn('flex items-start gap-3 px-4 py-3', !estado.incluir && 'opacity-60')}>
+      <span className="mt-2 flex w-3.5 justify-center">
         <Semaforo nivel={estado.nivel} tocado={estado.tocado} />
       </span>
       <div className="flex-1 min-w-0">
-        <p className={cn('font-medium text-sm truncate', !estado.incluir && 'line-through')}>{estado.concepto}</p>
+        <ConceptoEditable valor={estado.concepto} tachado={!estado.incluir} onCambiar={(concepto) => onCambiar({ concepto })} />
         {banco}
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          {!estado.incluir ? (
-            <span className="text-xs text-muted-foreground">No se importará</span>
-          ) : categoria ? (
-            <>
-              <Chip categoria={categoria} />
-              <Chip categoria={subcategoria} />
-              {estado.recurrente_template_id && <span className="text-xs text-muted-foreground">· Recurrente</span>}
-              {estado.fecha !== fila.linea.fecha && (
-                <span className="text-xs text-muted-foreground">· Se apunta el {formatearDia(estado.fecha)}</span>
+          <SelectorCategoria
+            categorias={categorias}
+            categoriaId={estado.categoria_id}
+            subcategoriaId={estado.subcategoria_id}
+            incluir={estado.incluir}
+            onElegir={(categoria_id, subcategoria_id) => onCambiar({ categoria_id, subcategoria_id, incluir: true })}
+            onIncluir={(incluir) => onCambiar({ incluir })}
+            onCrear={onCrearCategoria}
+          >
+            <button
+              type="button"
+              className={cn(
+                'flex items-center gap-1 rounded-md -mx-1 px-1 py-0.5 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                !estado.incluir || !categoria ? 'text-xs' : ''
               )}
-            </>
-          ) : (
-            <span className="text-xs font-medium text-red-600">Sin categoría</span>
+            >
+              {!estado.incluir ? (
+                <span className="text-muted-foreground">No se importará</span>
+              ) : categoria ? (
+                <>
+                  <ChipCategoria categoria={categoria} />
+                  <ChipCategoria categoria={subcategoria} />
+                </>
+              ) : (
+                <span className="font-medium text-red-600">Elegir categoría</span>
+              )}
+            </button>
+          </SelectorCategoria>
+          {estado.incluir && estado.recurrente_template_id && <span className="text-xs text-muted-foreground">· Recurrente</span>}
+          {estado.incluir && estado.fecha !== fila.linea.fecha && (
+            <span className="text-xs text-muted-foreground">· Se apunta el {formatearDia(estado.fecha)}</span>
           )}
         </div>
         {porRevisar && estado.incluir && <p className="text-xs text-muted-foreground mt-1">{estado.motivo}</p>}
       </div>
-      {importe}
-    </button>
+      <span className="mt-0.5">{importe}</span>
+    </div>
   );
 }
 

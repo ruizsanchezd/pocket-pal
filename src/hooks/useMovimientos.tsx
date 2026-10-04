@@ -414,6 +414,7 @@ export function useMovimientos() {
     handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
+    refetchMovimientos,
     addCategoria,
     haptic,
     profile,

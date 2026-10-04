@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
@@ -36,6 +35,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { MovimientoForm } from '@/components/movimientos/MovimientoForm';
+import { ImportadorExtracto } from '@/components/importador/ImportadorExtracto';
 import { SwipeableRow } from '@/components/movimientos/SwipeableRow';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useSwipeDownToDismiss } from '@/hooks/use-drawer-swipe-dismiss';
@@ -87,6 +87,7 @@ export default function Movimientos() {
     handleDuplicateMovimiento,
     handleSwipeDelete,
     handleSaveMovimiento,
+    refetchMovimientos,
     addCategoria,
     haptic,
     profile,
@@ -109,6 +110,8 @@ export default function Movimientos() {
     setSearchOpen(false);
     setFiltroBusqueda('');
   };
+
+  const [importarOpen, setImportarOpen] = useState(false);
 
   // Drawer presentation state (UI-only)
   const [drawerCategoriaOpen, setDrawerCategoriaOpen] = useState(false);
@@ -175,11 +178,9 @@ export default function Movimientos() {
               </Button>
             </div>
             <div className="hidden sm:flex gap-2 shrink-0">
-              <Button variant="outline" asChild>
-                <Link to="/movimientos/importar">
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Importar extracto
-                </Link>
+              <Button variant="outline" onClick={() => setImportarOpen(true)}>
+                <FileUp className="mr-2 h-4 w-4" />
+                Importar extracto
               </Button>
               <Button onClick={handleCreateMovimiento}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -764,12 +765,12 @@ export default function Movimientos() {
             <Plus className="mr-2 h-5 w-5" />
             Nuevo Movimiento
           </Button>
-          <Button variant="outline" className="h-12 w-12 shrink-0 p-0" asChild>
-            <Link to="/movimientos/importar" aria-label="Importar extracto">
-              <FileUp className="h-5 w-5" />
-            </Link>
+          <Button variant="outline" className="h-12 w-12 shrink-0 p-0" aria-label="Importar extracto" onClick={() => setImportarOpen(true)}>
+            <FileUp className="h-5 w-5" />
           </Button>
         </div>
+
+        <ImportadorExtracto open={importarOpen} onOpenChange={setImportarOpen} onCambios={refetchMovimientos} />
       </MainLayout>
     </ProtectedRoute>
   );

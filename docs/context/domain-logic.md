@@ -97,7 +97,14 @@ auto-generación de recurrentes si es el mes actual.
 
 ## Importador de extractos
 
-Página `/movimientos/importar` (`pages/ImportarExtracto.tsx`). Lee el extracto de CaixaBank en
+Una sola ventana que se abre desde Movimientos (`components/importador/ImportadorExtracto.tsx`):
+primero cuenta + archivo (`PasoArchivo`, admite arrastrar y soltar en cualquier parte), luego la
+revisión, que se corrige ahí mismo: el concepto es un campo editable y la categoría se elige en
+un buscador único de categoría + subcategoría (`SelectorCategoria`, que también crea categorías
+y deja marcar "No importar"). La fecha no se edita en la revisión. Cerrar con correcciones
+hechas pide confirmación. Al importar o deshacer, la lista se refresca con `refetchMovimientos`.
+
+Lee el extracto de CaixaBank en
 tres formas (`lib/importador/leer-extracto.ts` elige por extensión; los lectores, puros y
 testeados, en `lib/importador/extracto-caixabank.ts`):
 

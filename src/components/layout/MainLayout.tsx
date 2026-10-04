@@ -40,7 +40,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const location = useLocation();
   const [signOutConfirm, setSignOutConfirm] = useState(false);
   // Las subpáginas llevan su propia cabecera con botón atrás (MobileSubpageHeader) en móvil.
-  const isSubpage = location.pathname.startsWith('/configuracion/') || location.pathname === '/movimientos/importar';
+  const isSubpage = location.pathname.startsWith('/configuracion/');
 
   const handleSignOut = async () => {
     await signOut();
