@@ -27,6 +27,11 @@ Bug histórico (commits `2c46498`, `b45ed18`): un input numérico no permitía b
 dígito porque convertía `""` → `0` en el `onChange`. **Regla**: si la cantidad puede estar
 vacía mientras el usuario edita, manejar el valor como string en estado intermedio o aceptar
 `undefined`/NaN y dejar que Zod valide en submit. No forzar `0` en el change.
+**Mismo bug con valores por defecto distintos de 0** (p. ej. `dia_del_mes` = 1 en
+`GastoRecurrenteForm`): `onChange` con `value ? n : 1` y `value={field.value ?? 1}` impide borrar.
+Patrón correcto: `onChange` → `value === '' ? undefined : parseInt(value, 10)`, `value={field.value ?? ''}`,
+más `onBlur` que restaura el valor por defecto si quedó vacío (así se puede borrar mientras
+se edita, y al salir vuelve al 1). El esquema Zod mantiene `.default(1)` como red de seguridad.
 
 ### Editar duplicados
 Bug histórico (commit `3cdfdd4`): al editar un movimiento duplicado, se perdía la categoría/subcategoría.

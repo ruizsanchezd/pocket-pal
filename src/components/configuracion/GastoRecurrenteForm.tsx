@@ -159,9 +159,13 @@ export function GastoRecurrenteForm({
                   {...field}
                   onChange={(e) => {
                     const value = e.target.value;
-                    field.onChange(value ? parseInt(value, 10) : 1);
+                    field.onChange(value === '' ? undefined : parseInt(value, 10));
                   }}
-                  value={field.value ?? 1}
+                  onBlur={() => {
+                    if (field.value === undefined || Number.isNaN(field.value)) field.onChange(1);
+                    field.onBlur();
+                  }}
+                  value={field.value ?? ''}
                 />
               </FormControl>
               <FormMessage />
