@@ -276,6 +276,46 @@ describe('planificarImportacion', () => {
     expect(nueva(filas[0]).propuesta).toMatchObject({ sigueA: 1, nivel: 'rojo' });
     expect(nueva(filas[0]).propuesta.motivo).toMatch(/Cardesa/);
   });
+
+  it('un Bizum recibido va con el gasto de justo debajo, saltando otros Bizum recibidos', () => {
+    const filas = plan([
+      linea('2026-10-03', 'BIZUM RECIBIDO', 21.3, 'BIZUM'),
+      linea('2026-10-03', 'BIZUM RECIBIDO', 12.4, 'BIZUM'),
+      linea('2026-10-03', 'PIZZERIA PICCOLA', -36.8),
+      linea('2026-10-03', 'BIZUM RECIBIDO', 9, 'BIZUM'),
+      linea('2026-10-03', 'TABERNA EL TOMATE', -51.4),
+      linea('2026-10-03', 'FUNDACION JUAN MA', -10),
+    ], []);
+    expect([0, 1, 3].map((p) => nueva(filas[p]).propuesta.sigueA)).toEqual([2, 2, 4]);
+  });
+
+  it('un Bizum sin gasto que lo cubra justo debajo se queda sin propuesta', () => {
+    const regalo = importado('2026-10-05', 'ID DEL PEDIDO', -635.73, 'casa', null);
+    const filas = plan([
+      linea('2026-10-07', 'BIZUM RECIBIDO', 250, 'BIZUM'),
+      linea('2026-10-06', 'YOJISA SL', -60),
+    ], [regalo]);
+    expect(nueva(filas[0]).propuesta).toMatchObject({ categoria_id: null, nivel: 'rojo' });
+    expect(nueva(filas[0]).propuesta.sigueA).toBeUndefined();
+  });
+
+  it('solo propone categorías en las que ya has dejado Bizum recibidos', () => {
+    const conocidos = [
+      importado('2026-09-01', 'BIZUM RECIBIDO', 10, 'ocio', 'restaurante', 'Bizum cena'),
+      importado('2026-09-02', 'ESTANCO SOL', -6, 'ocio', 'vicio'),
+      importado('2026-09-03', 'ESTANCO SOL', -6, 'ocio', 'vicio'),
+      importado('2026-09-04', 'BAR PEPE', -30, 'ocio', 'restaurante'),
+      importado('2026-09-05', 'BAR PEPE', -30, 'ocio', 'restaurante'),
+    ];
+    const filas = plan([
+      linea('2026-10-02', 'BIZUM RECIBIDO', 4, 'BIZUM'),
+      linea('2026-10-02', 'ESTANCO SOL', -6.2),
+      linea('2026-10-01', 'BIZUM RECIBIDO', 15, 'BIZUM'),
+      linea('2026-10-01', 'BAR PEPE', -30),
+    ], conocidos);
+    expect(nueva(filas[0]).propuesta.categoria_id).toBeNull();
+    expect(nueva(filas[2]).propuesta).toMatchObject({ subcategoria_id: 'restaurante', sigueA: 3 });
+  });
 });
 
 describe('pistas para comercios nunca vistos', () => {

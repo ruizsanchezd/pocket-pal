@@ -532,30 +532,43 @@ export function planificarImportacion(entrada: EntradaPlan): FilaImportacion[] {
     filas[pos] = { tipo: 'nueva', pos, linea, propuesta, lineasExtra };
   }
 
-  // 5. Bizum recibido: suele ser tu parte de un gasto compartido de los días anteriores. Los
-  //    recurrentes (alquiler, suscripciones) no se comparten.
-  const gastos = [
-    ...conocidos
-      .filter((m) => m.cantidad < 0 && !m.recurrente_template_id && !normalizar(m.concepto).startsWith('BIZUM') &&
-        !(m.lineas_extracto ?? []).some(esBizum))
-      .map((m) => ({ pos: null as number | null, fecha: m.fecha, importe: m.cantidad, concepto: m.concepto, categoria_id: m.categoria_id as string | null, subcategoria_id: m.subcategoria_id })),
-    ...filas.flatMap((f) =>
-      f?.tipo === 'nueva' && f.linea.importe < 0 && !esBizum(f.linea) && !f.propuesta.recurrente_template_id
-        ? [{ pos: f.pos as number | null, fecha: f.linea.fecha, importe: f.linea.importe, concepto: f.propuesta.concepto, categoria_id: f.propuesta.categoria_id, subcategoria_id: f.propuesta.subcategoria_id }]
-        : []
-    ),
-  ];
+  // 5. Bizum recibido: tu parte de un gasto compartido que pagaste tú. Los amigos te lo mandan
+  //    justo después de pagar, así que es el gasto que tiene inmediatamente debajo en el
+  //    extracto (saltando los otros Bizum recibidos y las retenciones anuladas). Si
+  //    lo de debajo no encaja, no se adivina: buscar por fechas proponía devoluciones de
+  //    cosas que no tenían nada que ver.
+  const porHuella = new Map(conocidos.flatMap((m) => (m.lineas_extracto ?? []).map((l) => [huellaLinea(l), m] as const)));
+  // Solo se comparten ciertas cosas (restaurantes, cañas, cafés…): lo aprende de en qué
+  // categorías ha dejado otros Bizum recibidos.
+  const compartibles = new Set(
+    conocidos
+      .filter((m) => m.cantidad > 0 && (m.lineas_extracto ?? []).some((l) => esBizumGenerico(l) && l.importe > 0))
+      .map((m) => `${m.categoria_id}|${m.subcategoria_id ?? ''}`)
+  );
+  const gastoDe = (f: FilaImportacion) => {
+    if (f.linea.importe >= 0 || esBizum(f.linea)) return null;
+    if (f.tipo === 'nueva') {
+      return f.propuesta.recurrente_template_id ? null : {
+        pos: f.pos as number | null, concepto: f.propuesta.concepto,
+        categoria_id: f.propuesta.categoria_id, subcategoria_id: f.propuesta.subcategoria_id,
+      };
+    }
+    const m = f.tipo === 'apuntada' ? f.movimiento : f.tipo === 'anterior' ? porHuella.get(huellaLinea(f.linea)) : undefined;
+    return m && !m.recurrente_template_id
+      ? { pos: null as number | null, concepto: m.concepto, categoria_id: m.categoria_id as string | null, subcategoria_id: m.subcategoria_id }
+      : null;
+  };
   for (const f of filas) {
     if (f?.tipo !== 'nueva' || !esBizumGenerico(f.linea) || f.linea.importe <= 0) continue;
-    const fecha = parseISO(f.linea.fecha);
-    const candidato = gastos
-      .filter((g) => {
-        const d = differenceInCalendarDays(fecha, parseISO(g.fecha));
-        return d >= 0 && d <= DIAS_BIZUM && -g.importe > f.linea.importe;
-      })
-      // El más reciente y, a igualdad, el más pequeño que aún cubre el Bizum.
-      .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.importe - a.importe)[0];
-    if (!candidato) continue;
+    const debajo = filas.slice(f.pos + 1).find(
+      (o) => o && o.tipo !== 'anulada' && !(esBizumGenerico(o.linea) && o.linea.importe > 0)
+    );
+    if (!debajo || dias(debajo.linea.fecha, f.linea.fecha) > DIAS_BIZUM || -debajo.linea.importe <= f.linea.importe) continue;
+    const gasto = gastoDe(debajo);
+    // Sin categoría todavía (fila nueva en rojo): se propone y el Bizum la copiará.
+    if (!gasto || (gasto.categoria_id && compartibles.size &&
+      !compartibles.has(`${gasto.categoria_id}|${gasto.subcategoria_id ?? ''}`))) continue;
+    const candidato = { ...gasto, importe: debajo.linea.importe };
     f.propuesta = {
       ...f.propuesta,
       categoria_id: candidato.categoria_id,

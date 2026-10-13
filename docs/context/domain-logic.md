@@ -163,9 +163,12 @@ Cada línea del extracto acaba en uno de cuatro tipos, por este orden:
      (alquiler, nómina), propone esa fecha.
    - "COMPRA CON TARJETA" toma el comercio de la retención anulada de justo debajo y guarda
      retención y devolución en `lineas_extracto` para aprender el nombre.
-   - Un Bizum recibido propone la categoría del gasto no recurrente más reciente de los 3 días
-     anteriores que lo cubre; si ese gasto es otra fila nueva, la sigue (`sigueA`) hasta que el
-     usuario toque el Bizum.
+   - Un Bizum recibido propone la categoría del gasto que tiene **justo debajo en el extracto**
+     (saltando otros Bizum recibidos y retenciones anuladas), si lo cubre, es de ≤3 días antes,
+     no es recurrente y su categoría ya ha recibido Bizum antes (aprendido del historial; sin
+     categoría aún, vale). Si no, se queda sin propuesta: buscar "el gasto más reciente que lo
+     cubre" en una ventana de días fallaba ~3 de cada 4 veces en el histórico (oct 2026). Si
+     ese gasto es otra fila nueva, la sigue (`sigueA`) hasta que el usuario toque el Bizum.
 
 Al guardar (`guardarImportacion` en `hooks/useImportador.ts`): los nuevos se insertan en una
 sola llamada con `created_at` decreciente según la posición en el extracto (el orden intradía
